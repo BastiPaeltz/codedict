@@ -1,5 +1,6 @@
 # Coding encyclopedia
   
+Ein command line tool für Developer zum Aufbauen einer Enzyklopädie fürs Programmieren
 ## Was ist es  
   
 ###Skip am besten gleich zu "Usage"
@@ -23,14 +24,15 @@ ce add [-I -i]
 ####Was es tut:
 Ich fang Verständlichkeitshalber mit "ce add" an:  
   
-ce add -> Man wird aufgefordert mit entsprechenden Prompts folgendes einzugeben:  
+ce add -> Man wird aufgefordert mit entsprechenden Prompts folgendes einzugeben:
+Hier ein Besipiel  
   				
-language:	python  
+language:	        python  
 use_case: 	increment  
 command: 	+= 1  
 comment:	"NIE i=i+1 benutzen"  
 alternatives:	none  
-links:		link_zur_documentation, (oder link zu einer frage bei stack overflow die wichtig ist und damit zu tun hat)  
+links:		link_zur_documentation, (oder zb. link zu einer frage bei stack overflow die wichtig ist und damit zu tun hat)  
 code examples:	[
 					i = 0     
 					i += 1  
@@ -90,5 +92,3 @@ Man kann also 1. sich die keywords (use_cases) so wählen wie man es selbst will
 
 ## Wie sieht die Implementierung aus
 das dürfte eig sehr machbar sein, eine lokale DB für die ganzen Daten, eine command line applikation in python ruby oder so und HTML um die Inhalte der DB schön anzuzeigen erstmal. Später dann ne Website wenn wir es auch für andere anbieten wollen (ursprünglich hatte ich das mir nur für mich selbst gedacht). Also echt nich so viel!
-
-
