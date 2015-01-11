@@ -63,14 +63,14 @@ ce javascript output -> gibt z.B. "console.log()"
 
 Will man mehr haben gibt es die Flags -s(short, gibt zusätzlich noch den comment aus) und -a(all)
 
-ce javascript output -s -> "console.log()", "Semikolon am Ende nicht vergessen (mir ist nix bessres eingefallen)"
+ce javascript output -s -> "console.log()", "Semikolon am Ende nicht vergessen"
 
 ce javascript output -a ->
 
 command: 	console.log  
-comment:	"Semikolon nicht vergessen"  
-alternatives:	  none
-links:		"http://www.w3schools.com/js/js_output.asp", "http://www.weblizards.de/blog/2012/01/javascript-debuggen-mit-console-log-verfeinert/"  
+comment:	"Semikolon nicht vergessen"    
+alternatives:	  none  
+links:		"http://www.w3schools.com/js/js_output.asp",   "http://www.weblizards.de/blog/2012/01/javascript-debuggen-mit-console-log-verfeinert/"  
 code examples:	[
 					console.log("A")  
 					// output A
