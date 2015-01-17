@@ -36,3 +36,4 @@ if __name__ == '__main__':
     COMMAND_LINE_ARGS = docopt(__doc__, version = "codedict v 0.1")
     status = start_process(COMMAND_LINE_ARGS)
     print status
+    

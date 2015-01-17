@@ -26,9 +26,9 @@ def change_content(content):
 		try:
 			with db:
 				db.execute('''
-			    	UPDATE ? SET ? = ? WHERE use_case = ?
-			    '''),((content['language'], content['attribute'], 
-			    	content['data'], content['use_case']))
+			    	UPDATE {0} SET ? = ? WHERE use_case = ?
+			    '''.format(content['language']), ((content['attribute'], 
+			    	content['data'], content['use_case'])))
 		except sqlite3.IntegrityError:
 			pass
 		db.close()
@@ -44,6 +44,7 @@ def add_content(content):
 	"""
 
 	db = establish_db_connection()
+	print "DB",db
 	if db:
 		try:
 			with db:
@@ -51,13 +52,17 @@ def add_content(content):
 			    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
 			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
 				'''.format(content['language']))
-				
-				db.execute('''
+
+				print "Created table", content['language']
+		
+				row = db.execute('''
 			    	INSERT INTO {0} (use_case,
 			                   command, comment)VALUES(?, ?, ?)
-				'''.format(content['language']), (content['use_case'], 
-					content['command'], content['comment']))
+				'''.format(content['language']),((content['use_case'], 
+					content['command'], content['comment'])))
 
+				for items in row: 
+					print "Row", items
 		#TODO perform proper exception handling
 		except sqlite3.IntegrityError:
 			print "Cant add element twice"
@@ -70,20 +75,81 @@ def add_content(content):
 		return False
 
 
-def retrieve_content(location, requested_content=""):
+def retrieve_extended_content(location):
 	"""Retrieves content from the DB.
 
 	"""
 
 	db = establish_db_connection()
 	if db:
-		all_results = db.execute('''
-		    SELECT command, ? from ?  where use_case = ?
-		    ''',(requested_content, location['language'], location['use_case']))
-		print all_results
+		all_results = []
+		db_execute = db.execute('''
+		    SELECT command, comment from {0} where use_case = ?
+		    '''.format(location['<language>']), (location['use_case']))
+		for row in db_execute:
+			all_results.append(row)
+		db.close()	
 		return (all_results, location)
 	else:
 		print "Error while reaching DB."
 		return False
-	
+
+
+def retrieve_all_content(location):
+	"""Retrieves content from the DB.
+
+	"""
+
+	db = establish_db_connection()
+	if db:
+		all_results = []
+		db_execute = db.execute('''
+		    SELECT * from {0} WHERE use_case = ? 
+		    '''.format(location['<language>']), (location['use_case']))
+		for row in db_execute:
+			all_results.append(row)
+		db.close()	
+		return (all_results, location)
+	else:
+		print "Error while reaching DB."
+		return False
+
+
+def retrieve_lang_content(location):
+	"""Retrieves content from the DB.
+
+	"""
+
+	db = establish_db_connection()
+	if db:
+		all_results = []
+		db_execute = db.execute('''
+		    SELECT command from {0} 
+		    '''.format(location['<language>']))
+		for row in db_execute:
+			all_results.append(row)
+		db.close()	
+		return (all_results, location)
+	else:
+		print "Error while reaching DB."
+		return False	
 		
+
+def retrieve_content(location):
+	"""Retrieves content from the DB.
+
+	"""
+
+	db = establish_db_connection()
+	if db:
+		all_results = []
+		db_execute = db.execute('''
+		    SELECT command from {0} where use_case = ? 
+		    '''.format(location['<language>']), (location['<use_case>']))
+		for row in db_execute:
+			all_results.append(row)
+		db.close()	
+		return (all_results, location)
+	else:
+		print "Error while reaching DB."
+		return False
