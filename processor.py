@@ -1,6 +1,7 @@
 """processes the command line args.
 
 """
+
 import database
 
 
@@ -9,8 +10,8 @@ def start_process(args):
 
 	"""
 
-	relevant_args = ({key: value for key,value in args.iteritems() 
-	if value})
+	relevant_args = ({key: value for key, value in args.iteritems() 
+						if value})
 	return check_operation(relevant_args)
 
 
@@ -19,8 +20,8 @@ def check_operation(relevant_args):
 	""" Checks which operation (add, display, ...)
 		needs to be handled. 
 
-
 	"""
+	
 	content, flags = split_arguments(relevant_args)
 	print content
 	print flags
@@ -40,16 +41,17 @@ def check_operation(relevant_args):
 				""".format(content, flags)
 		return "error"
 
-def process_code_adding(location):
+def process_code_adding(content):
 	"""Processes code adding, provides a nice input form for the user.
 
 	"""
 
 	print "Setting up form"
 	#TODO providing nice form and reading out content 
-	code = raw_input().strip()
-	print "Got {0} code to process for item {1}".format(code, location)
-	# TODO send content to DB like database.add_content(code, location) 
+	content['data'] = raw_input().strip()
+	content['attribute'] = "code"
+	print content
+	database.change_content(content) 
 	return "Finished adding code to DB"
 
 
@@ -60,8 +62,11 @@ def process_add_content(content, flags):
 
 	if '-I' in flags or '-i' in flags:
 		print "Modifying only 1 attribute called {0}".format(content)
+		content['data'] = raw_input()
 		print "Connecting to DB"
-		#
+		print content
+		database.change_content(content)
+		#TODO -I von -i unterscheiden 
 		return "Finished adding content to DB"
 	else:
 		content_to_be_added = {}
@@ -69,10 +74,8 @@ def process_add_content(content, flags):
 		content_to_be_added['use_case'] = raw_input("Shortcut:")
 		content_to_be_added['command'] = raw_input("command:")
 		content_to_be_added['comment'] = raw_input("comment:")
-		content_to_be_added['alternatives'] = raw_input("alternatives:")
 		print "Adding {0} to DB".format(content_to_be_added)
-		print "Connecting to DB"
-		return "Finished adding content to DB"
+		database.add_content(content_to_be_added)
 
 def process_display_content(location, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -116,5 +119,4 @@ def split_arguments(arguments):
 			flags[index] = item
 		else:
 			content[index] = item 
-	tuple = (content, flags)
-	return tuple
+	return (content, flags)

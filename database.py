@@ -1,67 +1,80 @@
 """Defines the data processing / handling using local sqlite3 database
 
-
+ 
 """
 
 
 import sqlite3
-import os
-
-def check_db_existence(name):
-	"""Checks if the DB has to be created first
-
-	"""
-
-	if name in os.listdir():
-		print "DB is already created"
-		return True
-	else:
-		print "Creating DB"
-		if "error":
-			return False
-		else:
-			return True
 
 
-def setup_database(name):
-	"""Creates the database, makes it ready for use
-
-	"""
-
-	if check_db_existence(name):
-		connector = sqlite3.connect(name)
-		return connector
-	else: 
-		print "An error has occured while creating the DB."
+def establish_db_connection():
+	try:
+		db = sqlite3.connect('codedict.DB')
+	except sqlite3.DatabaseError:
+		print "Database is encrypted or not a DB file."
 		return False
+	else: return db	
 
 
-def add_content(location, content):
+
+def change_content(content):
+	"""Changes content of the database.
+
+	"""
+
+	db = establish_db_connection()
+	if db:
+		try:
+			with db:
+				db.execute('''
+			    	UPDATE ? SET ? = ? WHERE use_case = ?
+			    '''),((content['language'], content['attribute'], 
+			    	content['data'], content['use_case']))
+		#TODO PROPER EXCEPTION HANDLING
+		db.close()
+		return True
+
+def add_content(content):
 	"""Adds content to the database.
 
 	"""
 
-	connector = setup_database('database.db')
-	if connector:
-		print """
-			Adding content {0} now to the DB
-			""".format(content)
-	else:
-		print "An error has occured while Setting up DB."
+	db = establish_db_connection()
+	if db:
+		try:
+			with db:
+				db.execute('''
+			    	CREATE table IF NOT EXISTS TableName = ? (id INTEGER PRIMARY KEY, 
+			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
+				''', (content['language'],))
+		
+				db.execute('''
+			    	INSERT INTO TableName = ? (use_case,
+			                   command, comment)VALUES(?, ?, ?))
+				''', ((content['language'], content['use_case'], 
+					content['command'], content['comment'])))
+
+		#TODO perform proper exception handling
+		except sqlite3.IntegrityError:
+			print "Cant add element twice"
+			return False
+
+		db.close()
+		return True		
 
 
-def display_content(location, requested_content = None):
-	"""Displays content from the DB.
+def retrieve_content(location, requested_content="*"):
+	"""Retrieves content from the DB.
 
 	"""
 
-	connector = setup_database('database.db')
-	if connector:
-		print """
-			  Reading out {0} from DB now.
-			  Flags = {1}
-			  """.format(location, requested_content)
-		return content
-	else:
-		print "An error has occured while setting up DB."
-		return False
+	db = establish_db_connection()
+	if db:
+		db.execute('''
+		    	SELECT command from ?  where 
+
+
+
+
+	
+		
