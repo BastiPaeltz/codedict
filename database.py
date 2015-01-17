@@ -29,7 +29,8 @@ def change_content(content):
 			    	UPDATE ? SET ? = ? WHERE use_case = ?
 			    '''),((content['language'], content['attribute'], 
 			    	content['data'], content['use_case']))
-		#TODO PROPER EXCEPTION HANDLING
+		except sqlite3.IntegrityError:
+			pass
 		db.close()
 		return True
 	else:
@@ -47,15 +48,15 @@ def add_content(content):
 		try:
 			with db:
 				db.execute('''
-			    	CREATE table IF NOT EXISTS TableName = ? (id INTEGER PRIMARY KEY, 
+			    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
 			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
-				''', (content['language'],))
-		
+				'''.format(content['language']))
+				
 				db.execute('''
-			    	INSERT INTO TableName = ? (use_case,
-			                   command, comment)VALUES(?, ?, ?))
-				''', ((content['language'], content['use_case'], 
-					content['command'], content['comment'])))
+			    	INSERT INTO {0} (use_case,
+			                   command, comment)VALUES(?, ?, ?)
+				'''.format(content['language']), (content['use_case'], 
+					content['command'], content['comment']))
 
 		#TODO perform proper exception handling
 		except sqlite3.IntegrityError:
@@ -76,11 +77,9 @@ def retrieve_content(location, requested_content=""):
 
 	db = establish_db_connection()
 	if db:
-		all_results = []
-		for results in db.execute('''
+		all_results = db.execute('''
 		    SELECT command, ? from ?  where use_case = ?
-		    ''',(requested_content, location['language'], location['use_case']):
-		    all_results.append(results)
+		    ''',(requested_content, location['language'], location['use_case']))
 		print all_results
 		return (all_results, location)
 	else:
