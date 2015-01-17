@@ -65,7 +65,10 @@ def process_add_content(content, flags):
 		content['data'] = raw_input()
 		print "Connecting to DB"
 		print content
-		database.change_content(content)
+		success = database.change_content(content)
+		if success:
+			print "success"
+		else: print "Failure"
 		#TODO -I von -i unterscheiden 
 		return "Finished adding content to DB"
 	else:
@@ -75,7 +78,10 @@ def process_add_content(content, flags):
 		content_to_be_added['command'] = raw_input("command:")
 		content_to_be_added['comment'] = raw_input("comment:")
 		print "Adding {0} to DB".format(content_to_be_added)
-		database.add_content(content_to_be_added)
+		success = database.add_content(content_to_be_added)
+		if success:
+			print "success"
+		else: print "Failure"
 
 def process_display_content(location, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -91,20 +97,30 @@ def process_display_content(location, flags):
 		print "No nice form needed."
 		if '-s' in flags:
 			print "Short version requested."
-			requested_content = 'Short version'
-			#return database.display_content(location, requested_content)
+			requested_content = 'comment'
+			data = database.display_content(location, requested_content)
 			print "Getting data from DB"
+			all_results, location = (*data)
+			print "Result for lang {1} is {2}"
+					.format(location['language'], all_results)
 			return "Finished displaying content with comment."
 		else:
 			print "Only command requested"
 			print "Getting data from DB"
+			data = database.display_content(location)
+			all_results, location = (*data)
+			print "Result for usecase {0} in lang {1} is {2}"
+					.format(location['use_case'], location['language'], all_results)
 			return "Finished displaying command."
 	else:
-		requested_content = 'All'
+		location['use_case'] = '*'
 		print "Got displaying all content requested."
 		print "Setting up nice input form." 
-		#content = return database.display_content(location, requested_content)
+		data = database.display_content(location)
 		print "Getting data from DB."
+		all_results, location = (*data)
+		print "Result for usecase {0} in lang {1} is {2}"
+				.format(location['use_case'], location['language'], all_results)
 		print "Printing to nice form."
 		return "Finished displaying content in nice form."
 

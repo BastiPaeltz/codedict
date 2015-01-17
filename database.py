@@ -3,8 +3,8 @@
  
 """
 
-
 import sqlite3
+
 
 
 def establish_db_connection():
@@ -13,8 +13,7 @@ def establish_db_connection():
 	except sqlite3.DatabaseError:
 		print "Database is encrypted or not a DB file."
 		return False
-	else: return db	
-
+	return db	
 
 
 def change_content(content):
@@ -33,6 +32,10 @@ def change_content(content):
 		#TODO PROPER EXCEPTION HANDLING
 		db.close()
 		return True
+	else:
+		print "Error while reaching DB."
+		return False
+
 
 def add_content(content):
 	"""Adds content to the database.
@@ -61,20 +64,27 @@ def add_content(content):
 
 		db.close()
 		return True		
+	else:
+		print "Error while reaching DB."
+		return False
 
 
-def retrieve_content(location, requested_content="*"):
+def retrieve_content(location, requested_content=""):
 	"""Retrieves content from the DB.
 
 	"""
 
 	db = establish_db_connection()
 	if db:
-		db.execute('''
-		    	SELECT command from ?  where 
-
-
-
-
+		all_results = []
+		for results in db.execute('''
+		    SELECT command, ? from ?  where use_case = ?
+		    ''',(requested_content, location['language'], location['use_case']):
+		    all_results.append(results)
+		print all_results
+		return (all_results, location)
+	else:
+		print "Error while reaching DB."
+		return False
 	
 		
