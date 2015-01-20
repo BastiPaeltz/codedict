@@ -10,8 +10,7 @@ def start_process(args):
 
 	"""
 
-	relevant_args = ({key: value for key, value in args.iteritems() 
-						if value})
+	relevant_args = ({key: value for key, value in args.iteritems() if value})
 	return check_operation(relevant_args)
 
 
@@ -49,7 +48,7 @@ def process_code_adding(content):
 	print "Setting up form"
 	#TODO providing nice form and reading out content 
 	content['data'] = raw_input().strip()
-	content['attribute'] = "code"
+	content['<attribute>'] = "code"
 	print content
 	database.change_content(content) 
 	return "Finished adding code to DB"
@@ -73,10 +72,11 @@ def process_add_content(content, flags):
 		return "Finished adding content to DB"
 	else:
 		content_to_be_added = {}
-		content_to_be_added['language'] = raw_input("Language:")
-		content_to_be_added['use_case'] = raw_input("Shortcut:")
-		content_to_be_added['command'] = raw_input("command:")
-		content_to_be_added['comment'] = raw_input("comment:")
+		content_to_be_added['language'] = raw_input("Language:").strip()
+		content_to_be_added['use_case'] = raw_input("Shortcut:").strip()
+		content_to_be_added['command'] = raw_input("command:").strip()
+		content_to_be_added['comment'] = raw_input("comment:").strip()
+		#TODO VALIDATE DATA
 		print "Adding {0} to DB".format(content_to_be_added)
 		success = database.add_content(content_to_be_added)
 		if success:
@@ -90,7 +90,7 @@ def process_display_content(location, flags):
 
 	print flags
 	print location	
-	if not flags:
+	if not "<use_case>" in location:
 		print "No flags detected"
 		print "Getting all shortcuts for {0} from DB".format(location)
 		data = database.retrieve_lang_content(location)
@@ -107,14 +107,14 @@ def process_display_content(location, flags):
 			data = database.retrieve_extended_content(location)
 			print "Getting data from DB"
 			all_results, location = data[0], data[1]
-			print "Result for usecase {0} lang {1} is {2}".format(location['use_case'], location['language'], all_results)
+			print "Result for usecase {0} lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
 			return "Finished displaying content with comment."
 		else:
 			print "Only command requested"
 			print "Getting data from DB"
 			data = database.retrieve_content(location)
 			all_results, location = data[0], data[1]
-			print "Result for usecase {0} in lang {1} is {2}".format(location['use_case'], location['language'], all_results)
+			print "Result for usecase {0} in lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
 			return "Finished displaying command."
 	
 	else:
@@ -123,7 +123,7 @@ def process_display_content(location, flags):
 		data = database.retrieve_all_content(location)
 		print "Getting data from DB."
 		all_results, location = data[0], data[1]
-		print "Result for usecase {0} in lang {1} is {2}".format(location['use_case'], location['language'], all_results)
+		print "Result for usecase {0} in lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
 		print "Printing to nice form."
 		return "Finished displaying content in nice form."
 

@@ -6,7 +6,7 @@ for development via the command line with ease.
 Usage:
   codedict.py -d <language> <use_case> [-s -e]
   codedict.py -d <language>
-  codedict.py -a (-i | -I) <language> <use_case> <atrribute>
+  codedict.py -a (-i | -I) <language> <use_case> <attribute>
   codedict.py -a 
   codedict.py -c <language> <use_case>
   codedict.py (-h | --help)

@@ -26,9 +26,9 @@ def change_content(content):
 		try:
 			with db:
 				db.execute('''
-			    	UPDATE {0} SET ? = ? WHERE use_case = ?
-			    '''.format(content['language']), ((content['attribute'], 
-			    	content['data'], content['use_case'])))
+			    	UPDATE {0} SET {1} = ? WHERE use_case = ?
+			    '''.format(content['<language>'], content['<attribute>']), (content['data']
+			    , content['<use_case>']))
 		except sqlite3.IntegrityError:
 			pass
 		db.close()
@@ -76,7 +76,7 @@ def add_content(content):
 
 
 def retrieve_extended_content(location):
-	"""Retrieves content from the DB.
+	"""Retrieves command, comment from the DB.
 
 	"""
 
@@ -85,7 +85,7 @@ def retrieve_extended_content(location):
 		all_results = []
 		db_execute = db.execute('''
 		    SELECT command, comment from {0} where use_case = ?
-		    '''.format(location['<language>']), (location['use_case']))
+		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)
 		db.close()	
@@ -96,7 +96,7 @@ def retrieve_extended_content(location):
 
 
 def retrieve_all_content(location):
-	"""Retrieves content from the DB.
+	"""Retrieves all content for 1 specific use_case from the DB.
 
 	"""
 
@@ -105,7 +105,7 @@ def retrieve_all_content(location):
 		all_results = []
 		db_execute = db.execute('''
 		    SELECT * from {0} WHERE use_case = ? 
-		    '''.format(location['<language>']), (location['use_case']))
+		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)
 		db.close()	
@@ -116,7 +116,7 @@ def retrieve_all_content(location):
 
 
 def retrieve_lang_content(location):
-	"""Retrieves content from the DB.
+	"""Retrieves content for 1 specified language from the DB.
 
 	"""
 
@@ -124,7 +124,7 @@ def retrieve_lang_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT command from {0} 
+		    SELECT command, use_case from {0} 
 		    '''.format(location['<language>']))
 		for row in db_execute:
 			all_results.append(row)
@@ -136,7 +136,7 @@ def retrieve_lang_content(location):
 		
 
 def retrieve_content(location):
-	"""Retrieves content from the DB.
+	"""Retrieves basic content (command) for 1 use_case from the DB.
 
 	"""
 
@@ -145,7 +145,7 @@ def retrieve_content(location):
 		all_results = []
 		db_execute = db.execute('''
 		    SELECT command from {0} where use_case = ? 
-		    '''.format(location['<language>']), (location['<use_case>']))
+		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)
 		db.close()	
