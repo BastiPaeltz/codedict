@@ -14,16 +14,16 @@ Usage:
 
 Options:
 
-  -d 			Displays dict content.
-  -s 			Displays comment additionally.
-  -e			Displays every value.
-  -a 			Adds content to the dict.
-  -i  			Modify only 1 value.
-  -I      		Same as -i but overrrides the value.
-  -c    		Add code examples. 
+  -d          Displays dict content.
+  -s          Displays comment additionally.
+  -e          Displays every value.
+  -a          Adds content to the dict.
+  -i          Modify only 1 value.
+  -I          Same as -i but overrrides the value.
+  -c          Add code examples. 
 
-  -h --help     Show this screen.  
-  --version		Show version.
+  -h --help   Show this screen.  
+  --version   Show version.
 
 """
 
