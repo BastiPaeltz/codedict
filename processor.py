@@ -5,6 +5,7 @@
 import database
 import ConfigParser
 import tempfile
+import time
 from subprocess import call
 
 
@@ -12,11 +13,12 @@ def start_process(args):
 	"""starts processing the command line args
 
 	"""
+
 	relevant_args = ({key: value for key, value in args.iteritems() if value})
 	return check_operation(relevant_args)
 
 
-def read_config(requested_item):
+def read_config(requested_item, section):
 	"""Reads the config file.
 
 	"""
@@ -24,21 +26,22 @@ def read_config(requested_item):
 	config = ConfigParser.RawConfigParser()
 	config.read('codedict_config.cfg')
 	try:
-		return config.get('Section1', requested_item)
+		return config.get(section, requested_item)
 	except:
 		print "Exception was raised"
 	return False
 
-def write_config(args):
+
+def write_config(args, section):
 	"""Writes to the config file.
 
 	"""
 
 	config = ConfigParser.RawConfigParser()
-	if 'Section1' not in config.sections():
-		config.add_section('Section1')
+	if section not in config.sections():
+		config.add_section(section)
 	for key in args:
-		config.set('Section1', key, args[key])
+		config.set(section, key, args[key])
 	
 	with open('codedict_config.cfg', 'wb') as configfile:
 	    config.write(configfile)
@@ -53,7 +56,6 @@ def check_operation(relevant_args):
 	content, flags = split_arguments(relevant_args)
 	print content
 	print flags
-
 	if '-d' in flags:
 		del flags['-d']
 		return process_display_content(content, flags)
@@ -69,6 +71,7 @@ def check_operation(relevant_args):
 				""".format(content, flags)
 		return "error"
 
+
 def process_code_adding(content):
 	"""Processes code adding, provides a nice input form for the user.
 
@@ -77,25 +80,34 @@ def process_code_adding(content):
 	print "Setting up form"
 
 
-	if read_config('editor') == False:
+	if read_config('editor', 'Section1') == False:
 		try:
-			write_config({'editor' : raw_input("Enter your editor:")})
+			write_config({'editor' : raw_input("Enter your editor:")}, Section1)
 		except:
 			print "Exception"
 	editor = read_config('editor')
 	if editor == 'subl' or editor == 'sublime' or editor == 'sublime_text':
 		editor = [editor, '-w', '-n']
-	code_data = ""
-	with tempfile.NamedTemporaryFile(delete = False, suffix="."+content['<language>']) as tmpfile:
+	else: editor = [editor]
+
+	my_suffix = read_config('editor', 'Section1')
+	if my_suffix == False:
+		print "Suffix error"
+		my_suffix = ""
+
+
+	with tempfile.NamedTemporaryFile(delete=False, suffix=my_suffix) as tmpfile:
   		call(editor + [tmpfile.name])
-  		tmpfile.seek(0)
-  		print tmpfile.read()
-	print code_data
-	content['data'] = code_data
+  		tmpfile.file.close()
+    	tmpfile = file(tmpfile.name)
+    	content['data'] = tmpfile.read()
+
 	print content['data']
 	content['<attribute>'] = "code"
 	print content
-	database.change_content(content) 
+	start = time.time()
+	database.update_content(content)
+	print "end", time.time()-start 
 	return "Finished adding code to DB"
 
 
@@ -105,28 +117,9 @@ def process_add_content(content, flags):
 	"""
 
 	if '-I' in flags or '-i' in flags:
-		print "Modifying only 1 attribute called {0}".format(content)
-		content['data'] = raw_input()
-		print "Connecting to DB"
-		print content
-		success = database.change_content(content)
-		if success:
-			print "success"
-		else: print "Failure"
-		#TODO -I von -i unterscheiden 
-		return "Finished adding content to DB"
+		update_content(content)
 	else:
-		content_to_be_added = {}
-		content_to_be_added['language'] = raw_input("Language:").strip()
-		content_to_be_added['use_case'] = raw_input("Shortcut:").strip()
-		content_to_be_added['command'] = raw_input("command:").strip()
-		content_to_be_added['comment'] = raw_input("comment:").strip()
-		#TODO VALIDATE DATA
-		print "Adding {0} to DB".format(content_to_be_added)
-		success = database.add_content(content_to_be_added)
-		if success:
-			print "success"
-		else: print "Failure"
+		insert_content()
 
 def process_display_content(location, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -135,6 +128,7 @@ def process_display_content(location, flags):
 
 	print flags
 	print location	
+
 	if not "<use_case>" in location:
 		print "No flags detected"
 		print "Getting all shortcuts for {0} from DB".format(location)
@@ -184,3 +178,56 @@ def split_arguments(arguments):
 		else:
 			content[index] = item 
 	return (content, flags)
+
+
+def update_content(content):
+	"""Processes how to update content.
+
+	"""
+	print "Modifying only 1 attribute called {0}".format(content)
+	content['data'] = raw_input()
+	print "Connecting to DB"
+	print content
+	start = time.time()
+	success = database.update_content(content)
+	print "end", time.time()-start
+	if success:
+		print "success"
+	else: print "Failure"
+	#TODO -I von -i unterscheiden 
+	return "Finished adding content to DB"
+
+
+def insert_content():
+	"""Processes how to insert content
+
+	"""
+
+	content_to_be_added = {}
+	content_to_be_added['language'] = raw_input("Language: ").strip()
+	content_to_be_added['use_case'] = raw_input("Shortcut: ").strip()
+	content_to_be_added['command'] = raw_input("command: ").strip()
+	content_to_be_added['comment'] = raw_input("comment: ").strip()
+	#TODO VALIDATE DATA
+
+	lang = content_to_be_added['language']
+	success = True
+	print lang
+	if read_config(lang, 'Section2') == False:
+		try:
+			my_input = raw_input(("Enter file extension for language {0}").format(lang))
+			write_config({lang : my_input}, 'Section2')
+		except:
+			print "Exception"
+
+		success = database.create_table(lang)	
+	if success:	
+		start = time.time()
+		print "Adding {0} to DB".format(content_to_be_added)
+		success = database.add_content(content_to_be_added)
+		print "end", time.time()-start
+		return success
+	else:
+		print "error"
+		return False
+

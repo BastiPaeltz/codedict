@@ -8,6 +8,8 @@ import sqlite3
 
 
 def establish_db_connection():
+	"""Establishes the connection to the DB."""
+
 	try:
 		db = sqlite3.connect('codedict.DB')
 	except sqlite3.DatabaseError:
@@ -16,7 +18,7 @@ def establish_db_connection():
 	return db	
 
 
-def change_content(content):
+def update_content(content):
 	"""Changes content of the database.
 
 	"""
@@ -38,8 +40,8 @@ def change_content(content):
 		return False
 
 
-def add_content(content):
-	"""Adds content to the database.
+def create_table(content):
+	"""Creates a table for a specific language in the DB.
 
 	"""
 
@@ -52,9 +54,27 @@ def add_content(content):
 			    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
 			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
 				'''.format(content['language']))
-
 				print "Created table", content['language']
-		
+		except sqlite3.IntegrityError:
+			print "Cant add element twice"
+			return False
+		db.close()
+		return True		
+	else:
+		print "Error while reaching DB."
+		return False
+
+
+def add_content(content):
+	"""Adds content to the database.
+
+	"""
+
+	db = establish_db_connection()
+	print "DB", db
+	if db:
+		try:
+			with db:
 				row = db.execute('''
 			    	INSERT INTO {0} (use_case,
 			                   command, comment)VALUES(?, ?, ?)
@@ -67,7 +87,6 @@ def add_content(content):
 		except sqlite3.IntegrityError:
 			print "Cant add element twice"
 			return False
-
 		db.close()
 		return True		
 	else:
@@ -84,7 +103,7 @@ def retrieve_extended_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT command, comment from {0} where use_case = ?
+		    SELECT command, comment FROM {0} where use_case LIKE ?
 		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)
@@ -104,7 +123,7 @@ def retrieve_all_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT * from {0} WHERE use_case = ? 
+		    SELECT * FROM {0} WHERE use_case LIKE ? 
 		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)
@@ -124,7 +143,7 @@ def retrieve_lang_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT command, use_case from {0} 
+		    SELECT command, use_case FROM {0} 
 		    '''.format(location['<language>']))
 		for row in db_execute:
 			all_results.append(row)
@@ -144,7 +163,7 @@ def retrieve_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT command from {0} where use_case = ? 
+		    SELECT command FROM {0} WHERE use_case LIKE ? 
 		    '''.format(location['<language>']), (location['<use_case>'],))
 		for row in db_execute:
 			all_results.append(row)

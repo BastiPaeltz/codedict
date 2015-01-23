@@ -29,11 +29,13 @@ Options:
 
 from docopt import docopt
 from processor import start_process
+import time
 
 
 if __name__ == '__main__':
 
     COMMAND_LINE_ARGS = docopt(__doc__, version = "codedict v 0.1")
+    start = time.time()
     status = start_process(COMMAND_LINE_ARGS)
     print status
-    
+    print time.time() - start
