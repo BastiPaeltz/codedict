@@ -6,7 +6,7 @@ for development via the command line with ease.
 Usage:
   codedict.py -d <language> <use_case> [-s -e]
   codedict.py -d <language>
-  codedict.py -a (-i | -I) <language> <use_case> <attribute>
+  codedict.py -a <language> <use_case> <attribute>
   codedict.py -a 
   codedict.py -c <language> <use_case>
   codedict.py (-h | --help)
@@ -36,6 +36,10 @@ if __name__ == '__main__':
 
     COMMAND_LINE_ARGS = docopt(__doc__, version = "codedict v 0.1")
     start = time.time()
-    status = start_process(COMMAND_LINE_ARGS)
-    print status
-    print time.time() - start
+    try:
+        status = start_process(COMMAND_LINE_ARGS)
+        print status
+    except KeyboardInterrupt:
+        print "\nAborted!"
+    finally:
+        print time.time() - start," sec"

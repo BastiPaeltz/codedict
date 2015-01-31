@@ -6,11 +6,13 @@ import database
 import ConfigParser
 import tempfile
 import time
+from prettytable import PrettyTable
 from subprocess import call
+from prettytable import from_db_cursor
 
 
 def start_process(args):
-	"""starts processing the command line args
+	"""starts processing the command line args.
 
 	"""
 
@@ -43,8 +45,40 @@ def write_config(args, section):
 	for key in args:
 		config.set(section, key, args[key])
 	
-	with open('codedict_config.cfg', 'wb') as configfile:
+	with open('codedict_config.cfg', 'a') as configfile:
 	    config.write(configfile)
+
+
+def nice_input_form(content, results=False):
+	"""Sets up a nice input form.
+
+
+	"""
+
+	if read_config('editor', 'Section1') == False:
+		try:
+			write_config({'editor' : raw_input("Enter your editor:")}, 'Section1')
+		except:
+			print "Exception"
+	editor = read_config('editor', 'Section1')
+	if editor == 'subl' or editor == 'sublime' or editor == 'sublime_text':
+		editor = [editor, '-w', '-n']
+	else: editor = [editor]
+
+	my_suffix = read_config(content['<language>'], 'Section2')
+	if my_suffix == False:
+		my_suffix = raw_input("Enter suffix for language '{0}':".format(content['<language>']))
+		write_config({content['<language>'] : my_suffix}, 'Section2')
+
+	initial_message = results.get_string()
+	print initial_message
+	with tempfile.NamedTemporaryFile(suffix=my_suffix) as tmpfile:
+		tmpfile.write(initial_message)
+		tmpfile.flush()
+  		call(editor + [tmpfile.name])
+  		tmpfile.file.close()
+    	tmpfile = file(tmpfile.name)
+    	return tmpfile.read()
 
 
 def check_operation(relevant_args):
@@ -78,31 +112,7 @@ def process_code_adding(content):
 	"""
 
 	print "Setting up form"
-
-
-	if read_config('editor', 'Section1') == False:
-		try:
-			write_config({'editor' : raw_input("Enter your editor:")}, Section1)
-		except:
-			print "Exception"
-	editor = read_config('editor')
-	if editor == 'subl' or editor == 'sublime' or editor == 'sublime_text':
-		editor = [editor, '-w', '-n']
-	else: editor = [editor]
-
-	my_suffix = read_config('editor', 'Section1')
-	if my_suffix == False:
-		print "Suffix error"
-		my_suffix = ""
-
-
-	with tempfile.NamedTemporaryFile(delete=False, suffix=my_suffix) as tmpfile:
-  		call(editor + [tmpfile.name])
-  		tmpfile.file.close()
-    	tmpfile = file(tmpfile.name)
-    	content['data'] = tmpfile.read()
-
-	print content['data']
+	content['data'] = nice_input_form(content)
 	content['<attribute>'] = "code"
 	print content
 	start = time.time()
@@ -159,9 +169,9 @@ def process_display_content(location, flags):
 	else:
 		print "Got displaying all content requested."
 		print "Setting up nice input form." 
-		data = database.retrieve_all_content(location)
+		all_results = database.retrieve_all_content(location)
 		print "Getting data from DB."
-		all_results, location = data[0], data[1]
+		nice_input_form(location, all_results)
 		print "Result for usecase {0} in lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
 		print "Printing to nice form."
 		return "Finished displaying content in nice form."
@@ -199,15 +209,15 @@ def update_content(content):
 
 
 def insert_content():
-	"""Processes how to insert content
+	"""Processes how to insert content.
 
 	"""
 
 	content_to_be_added = {}
-	content_to_be_added['language'] = raw_input("Language: ").strip()
-	content_to_be_added['use_case'] = raw_input("Shortcut: ").strip()
-	content_to_be_added['command'] = raw_input("command: ").strip()
-	content_to_be_added['comment'] = raw_input("comment: ").strip()
+	content_to_be_added['language'] = unicode(raw_input("Language: ").strip())
+	content_to_be_added['use_case'] = unicode(raw_input("Shortcut: ").strip())
+	content_to_be_added['command'] = unicode(raw_input("command: ").strip())
+	content_to_be_added['comment'] = unicode(raw_input("comment: ").strip())
 	#TODO VALIDATE DATA
 
 	lang = content_to_be_added['language']

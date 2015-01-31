@@ -4,6 +4,8 @@
 """
 
 import sqlite3
+from prettytable import from_db_cursor
+
 
 
 
@@ -123,12 +125,11 @@ def retrieve_all_content(location):
 	if db:
 		all_results = []
 		db_execute = db.execute('''
-		    SELECT * FROM {0} WHERE use_case LIKE ? 
-		    '''.format(location['<language>']), (location['<use_case>'],))
-		for row in db_execute:
-			all_results.append(row)
+		    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
+		    '''.format(location['<language>']), (location['<use_case>']+'%',))
+		pt = from_db_cursor(db_execute)
 		db.close()	
-		return (all_results, location)
+		return pt
 	else:
 		print "Error while reaching DB."
 		return False
