@@ -2,7 +2,7 @@
 
 """
 
-import database
+import database 
 import ConfigParser
 import tempfile
 import time
@@ -24,8 +24,11 @@ def read_config(requested_item, section):
 
 	"""
 
+
 	config = ConfigParser.RawConfigParser()
-	config.read('../res/codedict_config.cfg')
+	path_to_cfg = '../res/codedict_config.cfg'
+	print path_to_cfg
+	config.read(path_to_cfg)
 	try:
 		return config.get(section, requested_item)
 	except:
@@ -49,12 +52,27 @@ def write_config(args, section):
 	    config.write(configfile)
 
 
-def nice_input_form(content, results=False):
-	"""Sets up a nice input form.
+def display_content_input_form(content, results = False):
+	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
 	"""
 
+	editor = check_for_editor()
+
+	initial_message = results.get_string()
+	print initial_message
+
+	with tempfile.NamedTemporaryFile() as tmpfile:
+		tmpfile.write(initial_message)
+		tmpfile.flush()
+  		call(editor + [tmpfile.name])
+  	return True
+
+def check_for_editor():
+	"""Checks if the editor is set and if not prompts the user to enter it.
+
+	"""
 	if read_config('editor', 'Section1') == False:
 		try:
 			write_config({'editor' : raw_input("Enter your editor:")}, 'Section1')
@@ -64,22 +82,33 @@ def nice_input_form(content, results=False):
 	if editor == 'subl' or editor == 'sublime' or editor == 'sublime_text':
 		editor = [editor, '-w', '-n']
 	else: editor = [editor]
+	return editor
+
+
+def code_input_form(content, existent_code=False):
+	"""Sets up a nice input form for code adding and viewing.
+
+
+	"""
+
+	editor = check_for_editor()
 
 	my_suffix = read_config(content['<language>'], 'Section2')
 	if my_suffix == False:
 		my_suffix = raw_input("Enter suffix for language '{0}':".format(content['<language>']))
 		write_config({content['<language>'] : my_suffix}, 'Section2')
 
-	initial_message = results.get_string()
-	print initial_message
+	initial_message = existent_code[0].decode('utf-8')
 
-	with tempfile.NamedTemporaryFile(suffix=my_suffix) as tmpfile:
-		tmpfile.write(initial_message)
+	with tempfile.NamedTemporaryFile(delete=False, suffix=my_suffix) as tmpfile:
+		if existent_code:
+			tmpfile.write(initial_message)
 		tmpfile.flush()
   		call(editor + [tmpfile.name])
-  		tmpfile.file.close()
-    	tmpfile = file(tmpfile.name)
-    	return tmpfile.read()
+  	with open(tmpfile.name) as my_file:
+  		return my_file.read() 
+    
+   
 
 
 def check_operation(relevant_args):
@@ -113,8 +142,12 @@ def process_code_adding(content):
 
 	"""
 
+
+	existent_code = database.retrieve_code(content)
 	print "Setting up form"
-	content['data'] = nice_input_form(content)
+	content['data'] = code_input_form(content, existent_code)
+	if content['data'] == existent_code:
+		return 'No DB operation needed, nothing changed'
 	content['<attribute>'] = "code"
 	print content
 	start = time.time()
@@ -144,9 +177,8 @@ def process_display_content(location, flags):
 	if not "<use_case>" in location:
 		print "No flags detected"
 		print "Getting all shortcuts for {0} from DB".format(location)
-		data = database.retrieve_lang_content(location)
+		all_results = database.retrieve_lang_content(location)
 		print "Getting data from DB"
-		all_results, location = data[0], data[1]
 		print "Result for lang {0} is {1}".format(location['<language>'], all_results)
 		return "Finished displaying all shortcuts for 1 language"  
 	
@@ -155,28 +187,23 @@ def process_display_content(location, flags):
 		
 		if '-s' in flags:
 			print "Short version requested."
-			data = database.retrieve_extended_content(location)
+			all_results = database.retrieve_extended_content(location)
 			print "Getting data from DB"
-			all_results, location = data[0], data[1]
-			print "Result for usecase {0} lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
 			return "Finished displaying content with comment."
 		else:
 			print "Only command requested"
 			print "Getting data from DB"
-			data = database.retrieve_content(location)
-			all_results, location = data[0], data[1]
-			print "Result for usecase {0} in lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
+			all_results = database.retrieve_content(location)
 			return "Finished displaying command."
 	
 	else:
-		print "Got displaying all content requested."
+		print "Displaying all content requested."
 		print "Setting up nice input form." 
 		all_results = database.retrieve_all_content(location)
 		print "Getting data from DB."
-		nice_input_form(location, all_results)
-		print "Result for usecase {0} in lang {1} is {2}".format(location['<use_case>'], location['<language>'], all_results)
+		display_content_input_form(location, all_results)
 		print "Printing to nice form."
-		return "Finished displaying content in nice form."
+		return "Finished displaying content in editor."
 
 
 def split_arguments(arguments):

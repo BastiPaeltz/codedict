@@ -173,3 +173,21 @@ def retrieve_content(location):
 	else:
 		print "Error while reaching DB."
 		return False
+
+def retrieve_code(location):
+	"""Retrieves code for 1 use_case from the DB.
+
+	"""
+
+	db = establish_db_connection()
+	if db:
+		db_execute = db.execute('''
+		    SELECT code FROM {0} WHERE use_case = ? 
+		    '''.format(location['<language>']), (location['<use_case>'],))
+		all_results = db_execute.fetchone()
+		print all_results
+		db.close()	
+		return all_results
+	else:
+		print "Error while reaching DB."
+		return False
