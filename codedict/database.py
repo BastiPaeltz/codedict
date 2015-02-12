@@ -13,7 +13,7 @@ def establish_db_connection():
 	"""Establishes the connection to the DB."""
 
 	try:
-		db = sqlite3.connect('codedict.DB')
+		db = sqlite3.connect('../res/codedict.DB')
 	except sqlite3.DatabaseError:
 		print "Database is encrypted or not a DB file."
 		return False
@@ -42,21 +42,21 @@ def update_content(content):
 		return False
 
 
-def create_table(content):
+def create_table(lang):
 	"""Creates a table for a specific language in the DB.
 
 	"""
 
 	db = establish_db_connection()
-	print "DB",db
+	
 	if db:
 		try:
 			with db:
 				db.execute('''
 			    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
 			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
-				'''.format(content['language']))
-				print "Created table", content['language']
+				'''.format(lang))
+				print "Created table", lang
 		except sqlite3.IntegrityError:
 			print "Cant add element twice"
 			return False

@@ -15,4 +15,4 @@ Ein command line tool für Developer zum Aufbauen einer Enzyklopädie / eines W�
 - overthink the use case  
 - overthink names (usecase, command etc.) 
 
-and lust but not least, make it runnable on every os / distro 
+and last but not least, make it runnable on every os / distro 

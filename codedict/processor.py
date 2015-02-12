@@ -8,7 +8,6 @@ import tempfile
 import time
 from prettytable import PrettyTable
 from subprocess import call
-from prettytable import from_db_cursor
 
 
 def start_process(args):
@@ -26,11 +25,12 @@ def read_config(requested_item, section):
 	"""
 
 	config = ConfigParser.RawConfigParser()
-	config.read('codedict_config.cfg')
+	config.read('../res/codedict_config.cfg')
 	try:
 		return config.get(section, requested_item)
 	except:
-		print "Exception was raised"
+		#PROPER exception handling
+		print "Exception was raised READ CONFIG"
 	return False
 
 
@@ -45,7 +45,7 @@ def write_config(args, section):
 	for key in args:
 		config.set(section, key, args[key])
 	
-	with open('codedict_config.cfg', 'a') as configfile:
+	with open('../res/codedict_config.cfg', 'a') as configfile:
 	    config.write(configfile)
 
 
@@ -72,6 +72,7 @@ def nice_input_form(content, results=False):
 
 	initial_message = results.get_string()
 	print initial_message
+
 	with tempfile.NamedTemporaryFile(suffix=my_suffix) as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
@@ -90,6 +91,7 @@ def check_operation(relevant_args):
 	content, flags = split_arguments(relevant_args)
 	print content
 	print flags
+
 	if '-d' in flags:
 		del flags['-d']
 		return process_display_content(content, flags)
@@ -101,7 +103,7 @@ def check_operation(relevant_args):
 		return process_code_adding(content)
 	else:
 		print """An unexpected error has occured 
-				while parsing {0} with flags {1}
+				while processing {0} with flags {1}
 				""".format(content, flags)
 		return "error"
 
@@ -214,28 +216,32 @@ def insert_content():
 	"""
 
 	content_to_be_added = {}
-	content_to_be_added['language'] = unicode(raw_input("Language: ").strip())
-	content_to_be_added['use_case'] = unicode(raw_input("Shortcut: ").strip())
-	content_to_be_added['command'] = unicode(raw_input("command: ").strip())
-	content_to_be_added['comment'] = unicode(raw_input("comment: ").strip())
+	content_to_be_added['language'] = unicode(raw_input("language: ").strip(), 'utf-8')
+	content_to_be_added['use_case'] = unicode(raw_input("shortcut: ").strip(), 'utf-8')
+	content_to_be_added['command'] = unicode(raw_input("command: ").strip(), 'utf-8')
+	content_to_be_added['comment'] = unicode(raw_input("comment: ").strip(), 'utf-8')
 	#TODO VALIDATE DATA
 
 	lang = content_to_be_added['language']
 	success = True
-	print lang
+	print "Lang", read_config(lang, 'Section2')
+	
+	start = time.time()
+	db_status = database.create_table(lang)
+	print "Time creating Table:", time.time()-start
+
 	if read_config(lang, 'Section2') == False:
 		try:
-			my_input = raw_input(("Enter file extension for language {0}").format(lang))
+			my_input = raw_input(("Enter file extension for language {0} : ").format(lang))
 			write_config({lang : my_input}, 'Section2')
 		except:
-			print "Exception"
-
-		success = database.create_table(lang)	
+			print "Exception"	
+	
 	if success:	
 		start = time.time()
 		print "Adding {0} to DB".format(content_to_be_added)
 		success = database.add_content(content_to_be_added)
-		print "end", time.time()-start
+		print "Time adding content to DB", time.time()-start
 		return success
 	else:
 		print "error"
