@@ -1,12 +1,13 @@
 """ 
 Let's you compile and access your own personal dictionary 
-for development via the command line with ease.
+for programming via the command line with ease.
 
 Usage:
   codedict.py -d <language> <use_case> [-s -e]
   codedict.py -d <language>
   codedict.py -a <language> <use_case> <attribute>
   codedict.py -a 
+  codedict.py -f <path-to-file> <language> 
   codedict.py -c <language> <use_case>
   codedict.py (-h | --help)
   codedict.py --version
@@ -14,14 +15,16 @@ Usage:
 Options:
 
   -d          Displays dict content.
+  -a          Adds content to the dict.
+  -c          Display and add code examples.
+  -f          Load content from a file into the dict.
+  
   -s          Displays comment additionally.
   -e          Displays every value.
-  -a          Adds content to the dict.
   -i          Modify only 1 value.
   -I          Same as -i but overrrides the value.
-  -c          Add code examples. 
 
-  -h --help   Show this screen.  
+  --help      Show this screen.  
   --version   Show version.
 
 """

@@ -6,8 +6,9 @@ import database
 import ConfigParser
 import tempfile
 import time
+import re
 from prettytable import PrettyTable
-from subprocess import call
+from subprocess import call 
 
 
 def start_process(args):
@@ -73,6 +74,7 @@ def check_for_editor():
 	"""Checks if the editor is set and if not prompts the user to enter it.
 
 	"""
+
 	if read_config('editor', 'Section1') == False:
 		try:
 			write_config({'editor' : raw_input("Enter your editor:")}, 'Section1')
@@ -108,8 +110,6 @@ def code_input_form(content, existent_code=False):
   	with open(tmpfile.name) as my_file:
   		return my_file.read() 
     
-   
-
 
 def check_operation(relevant_args):
 	""" Checks which operation (add, display, ...)
@@ -121,6 +121,9 @@ def check_operation(relevant_args):
 	print content
 	print flags
 
+	if '-f' in flags:
+		del flags['-f']
+		return process_file_adding(content)
 	if '-d' in flags:
 		del flags['-d']
 		return process_display_content(content, flags)
@@ -156,6 +159,19 @@ def process_code_adding(content):
 	return "Finished adding code to DB"
 
 
+def process_file_adding(content):
+	"""Processes adding content from a file.
+
+	"""
+
+	with open(content['<path-to-file>']) as input_file:
+	    text = input_file.read()
+
+	items = re.findall(r'%\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text)	    
+	for item in items:
+		print item
+	return True
+
 def process_add_content(content, flags):
 	"""Processes content adding. 
 
@@ -165,6 +181,7 @@ def process_add_content(content, flags):
 		update_content(content)
 	else:
 		insert_content()
+
 
 def process_display_content(location, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -212,7 +229,7 @@ def split_arguments(arguments):
 	"""
 	content, flags = {}, {}
 	for index, item in arguments.iteritems(): 
-		if index in ('-s', '-e', '-I', '-i', '-c', '-a', '-d'):
+		if index in ('-s', '-e', '-I', '-i', '-c', '-a', '-d', '-f'):
 			flags[index] = item
 		else:
 			content[index] = item 
