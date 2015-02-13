@@ -154,7 +154,7 @@ def process_code_adding(content):
 	content['<attribute>'] = "code"
 	print content
 	start = time.time()
-	database.update_content(content)
+	database.add_content(content, content['<language>'])
 	print "end", time.time()-start 
 	return "Finished adding code to DB"
 
@@ -168,9 +168,9 @@ def process_file_adding(content):
 	    text = input_file.read()
 
 	items = re.findall(r'%\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text)	    
-	for item in items:
-		print item
-	return True
+	# for item in items:
+	# 	print item
+	database.add_content(items, content['<language>'], multiple_insert=True)
 
 def process_add_content(content, flags):
 	"""Processes content adding. 

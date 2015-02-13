@@ -67,7 +67,7 @@ def create_table(lang):
 		return False
 
 
-def add_content(content):
+def add_content(values, location, multiple_insert=False):
 	"""Adds content to the database.
 
 	"""
@@ -76,16 +76,33 @@ def add_content(content):
 	print "DB", db
 	if db:
 		try:
-			with db:
-				row = db.execute('''
-			    	INSERT INTO {0} (use_case,
-			                   command, comment)VALUES(?, ?, ?)
-				'''.format(content['language']),((content['use_case'], 
-					content['command'], content['comment'])))
+			if not multiple_insert:
+				with db:
+					row = db.execute('''
+				    	INSERT or REPLACE into {0} (use_case,
+				                   command, comment)VALUES(?, ?, ?)
+					'''.format(location),((values['use_case'], 
+						values['command'], values['comment'])))
 
-				for items in row: 
-					print "Row", items
-		#TODO perform proper exception handling
+					for items in row: 
+						print "Row", items
+			#TODO perform proper exception handling
+				return True
+			else:
+				#File adding
+				with db:
+					for new_item in values:
+						row = db.execute('''
+					    	INSERT or REPLACE into {0} (use_case,
+					                   command, comment)VALUES(?, ?, ?)
+						'''.format(location), ((new_item[0], 
+							new_item[1], new_item[2])))
+
+						for items in row: 
+							print "Row", items	 
+				return True
+
+
 		except sqlite3.IntegrityError:
 			print "Cant add element twice"
 			return False
