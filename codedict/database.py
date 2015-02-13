@@ -25,14 +25,16 @@ def update_content(content):
 
 	"""
 
-	db = establish_db_connection()
+	db = establish_db_connection() 
 	if db:
 		try:
 			with db:
 				db.execute('''
 			    	UPDATE {0} SET {1} = ? WHERE use_case = ?
-			    '''.format(content['<language>'], content['<attribute>']), (content['data']
-			    , content['<use_case>']))
+			    '''.format(content['<language>'], 
+			    	content['<attribute>']), 
+			    	(content['data'], 
+			    	content['<use_case>']))
 		except sqlite3.IntegrityError:
 			pass
 		db.close()
@@ -73,16 +75,16 @@ def add_content(values, location, multiple_insert=False):
 	"""
 
 	db = establish_db_connection()
-	print "DB", db
 	if db:
 		try:
 			if not multiple_insert:
 				with db:
 					row = db.execute('''
-				    	INSERT or REPLACE into {0} (use_case,
-				                   command, comment)VALUES(?, ?, ?)
-					'''.format(location),((values['use_case'], 
-						values['command'], values['comment'])))
+				    	INSERT or REPLACE into {0} 
+				    	(use_case, command, comment)
+				    	VALUES(?, ?, ?)
+					'''.format(location), (
+						(values['use_case'], values['command'], values['comment'])))
 
 					for items in row: 
 						print "Row", items
@@ -93,10 +95,11 @@ def add_content(values, location, multiple_insert=False):
 				with db:
 					for new_item in values:
 						row = db.execute('''
-					    	INSERT or REPLACE into {0} (use_case,
-					                   command, comment)VALUES(?, ?, ?)
-						'''.format(location), ((new_item[0], 
-							new_item[1], new_item[2])))
+					    	INSERT or REPLACE into {0} 
+					    	(use_case, command, comment)
+					    	VALUES(?, ?, ?)
+						'''.format(location), 
+							((new_item[0], new_item[1], new_item[2])))
 
 						for items in row: 
 							print "Row", items	 
@@ -123,11 +126,10 @@ def retrieve_extended_content(location):
 		all_results = []
 		db_execute = db.execute('''
 		    SELECT command, comment FROM {0} where use_case LIKE ?
-		    '''.format(location['<language>']), (location['<use_case>'],))
-		for row in db_execute:
-			all_results.append(row)
+		    '''.format(location['<language>']), (location['<use_case>']+'%',))
+		pt = from_db_cursor(db_execute)
 		db.close()	
-		return (all_results, location)
+		return pt
 	else:
 		print "Error while reaching DB."
 		return False
@@ -140,13 +142,16 @@ def retrieve_all_content(location):
 
 	db = establish_db_connection()
 	if db:
-		all_results = []
-		db_execute = db.execute('''
-		    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
-		    '''.format(location['<language>']), (location['<use_case>']+'%',))
-		pt = from_db_cursor(db_execute)
-		db.close()	
-		return pt
+		if check_for_table_existence(location['<language>'], db):
+			db_execute = db.execute('''
+			    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
+			    '''.format(location['<language>']), (location['<use_case>']+'%',))
+			pt = from_db_cursor(db_execute)
+			db.close()	
+			return pt
+		else:
+			print "No such table"
+			return False
 	else:
 		print "Error while reaching DB."
 		return False
@@ -159,14 +164,16 @@ def retrieve_lang_content(location):
 
 	db = establish_db_connection()
 	if db:
-		all_results = []
-		db_execute = db.execute('''
-		    SELECT command, use_case FROM {0} 
-		    '''.format(location['<language>']))
-		for row in db_execute:
-			all_results.append(row)
-		db.close()	
-		return (all_results, location)
+		if check_for_table_existence(location['<language>'], db):
+			db_execute = db.execute('''
+			    SELECT command, use_case FROM {0} 
+			    '''.format(location['<language>']))
+			pt = from_db_cursor(db_execute)
+			db.close()	
+			return pt
+		else:
+			print "No such table"
+			return False
 	else:
 		print "Error while reaching DB."
 		return False	
@@ -179,32 +186,52 @@ def retrieve_content(location):
 
 	db = establish_db_connection()
 	if db:
-		all_results = []
-		db_execute = db.execute('''
-		    SELECT command FROM {0} WHERE use_case LIKE ? 
-		    '''.format(location['<language>']), (location['<use_case>'],))
-		for row in db_execute:
-			all_results.append(row)
-		db.close()	
-		return (all_results, location)
+		if check_for_table_existence(location['<language>'], db):
+			db_execute = db.execute('''
+			    SELECT use_case, command FROM {0} WHERE use_case LIKE ? 
+			    '''.format(location['<language>']), (location['<use_case>'],))
+			if db_execute.fetchone():
+				pt = from_db_cursor(db_execute)
+			else:
+				pt = False
+			db.close()	
+			return pt
+		else:
+			print "No such table"
 	else:
 		print "Error while reaching DB."
 		return False
+
 
 def retrieve_code(location):
 	"""Retrieves code for 1 use_case from the DB.
 
 	"""
 
-	db = establish_db_connection()
+	db = establish_db_connection() 
 	if db:
-		db_execute = db.execute('''
-		    SELECT code FROM {0} WHERE use_case = ? 
-		    '''.format(location['<language>']), (location['<use_case>'],))
-		all_results = db_execute.fetchone()
-		print all_results
-		db.close()	
-		return all_results
+		if check_for_table_existence(location['<language>'], db):
+			db_execute = db.execute('''
+			    SELECT code FROM {0} WHERE use_case = ? 
+			    '''.format(location['<language>']), (location['<use_case>'],))
+			all_results = db_execute.fetchone()
+			print all_results
+			db.close() 	 
+			return all_results
+		else:
+			print "No such table"
+			return False
 	else:
 		print "Error while reaching DB."
 		return False
+
+
+def check_for_table_existence(table_name, database):
+	"""Checks if a table exists.
+
+	"""
+	db_execute = database.execute('''
+		    SELECT name FROM sqlite_master WHERE type='table' AND name=?
+		    ''', (table_name, ))
+	return db_execute.fetchone()
+

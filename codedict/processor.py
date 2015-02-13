@@ -7,7 +7,6 @@ import ConfigParser
 import tempfile
 import time
 import re
-from prettytable import PrettyTable
 from subprocess import call 
 
 
@@ -28,7 +27,6 @@ def read_config(requested_item, section):
 
 	config = ConfigParser.RawConfigParser()
 	path_to_cfg = '../res/codedict_config.cfg'
-	print path_to_cfg
 	config.read(path_to_cfg)
 	try:
 		return config.get(section, requested_item)
@@ -53,7 +51,7 @@ def write_config(args, section):
 	    config.write(configfile)
 
 
-def display_content_input_form(content, results = False):
+def display_content_nice_form(content, results = False):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
@@ -62,7 +60,6 @@ def display_content_input_form(content, results = False):
 	editor = check_for_editor()
 
 	initial_message = results.get_string()
-	print initial_message
 
 	with tempfile.NamedTemporaryFile() as tmpfile:
 		tmpfile.write(initial_message)
@@ -79,7 +76,7 @@ def check_for_editor():
 		try:
 			write_config({'editor' : raw_input("Enter your editor:")}, 'Section1')
 		except:
-			print "Exception"
+			print "Exception WRITE cfg"
 	editor = read_config('editor', 'Section1')
 	if editor == 'subl' or editor == 'sublime' or editor == 'sublime_text':
 		editor = [editor, '-w', '-n']
@@ -147,12 +144,10 @@ def process_code_adding(content):
 
 
 	existent_code = database.retrieve_code(content)
-	print "Setting up form"
 	content['data'] = code_input_form(content, existent_code)
 	if content['data'] == existent_code:
 		return 'No DB operation needed, nothing changed'
 	content['<attribute>'] = "code"
-	print content
 	start = time.time()
 	database.add_content(content, content['<language>'])
 	print "end", time.time()-start 
@@ -163,14 +158,17 @@ def process_file_adding(content):
 	"""Processes adding content from a file.
 
 	"""
+	db_status = database.create_table(content['<language>'])
+	if db_status:
+		with open(content['<path-to-file>']) as input_file:
+		    text = input_file.read()
 
-	with open(content['<path-to-file>']) as input_file:
-	    text = input_file.read()
-
-	items = re.findall(r'%\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text)	    
-	# for item in items:
-	# 	print item
-	database.add_content(items, content['<language>'], multiple_insert=True)
+		items = re.findall(r'%\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text)	    
+		# for item in items:
+		# 	print item
+		database.add_content(items, content['<language>'], multiple_insert=True)
+	else:
+		print "Error creating DB"
 
 def process_add_content(content, flags):
 	"""Processes content adding. 
@@ -188,15 +186,16 @@ def process_display_content(location, flags):
 
 	"""
 
-	print flags
-	print location	
-
 	if not "<use_case>" in location:
 		print "No flags detected"
 		print "Getting all shortcuts for {0} from DB".format(location)
 		all_results = database.retrieve_lang_content(location)
 		print "Getting data from DB"
-		print "Result for lang {0} is {1}".format(location['<language>'], all_results)
+		if all_results:
+			output = all_results.get_string(header=True, padding_width=3)
+			print output
+		else:
+			print "No results"
 		return "Finished displaying all shortcuts for 1 language"  
 	
 	elif not '-e' in flags:
@@ -205,20 +204,31 @@ def process_display_content(location, flags):
 		if '-s' in flags:
 			print "Short version requested."
 			all_results = database.retrieve_extended_content(location)
-			print "Getting data from DB"
+			if all_results:
+				output = all_results.get_string() 
+				print output
+			else:
+				print "No results"
 			return "Finished displaying content with comment."
 		else:
 			print "Only command requested"
-			print "Getting data from DB"
 			all_results = database.retrieve_content(location)
+			if all_results:
+				output = all_results.get_string(header=True, padding_width=3)
+				for line in output:
+					print len(line)
+				if output: 
+					print output
+				else:
+					print "No results"
+			else:
+				print "No results"
 			return "Finished displaying command."
 	
 	else:
 		print "Displaying all content requested."
-		print "Setting up nice input form." 
 		all_results = database.retrieve_all_content(location)
-		print "Getting data from DB."
-		display_content_input_form(location, all_results)
+		display_content_nice_form(location, all_results)
 		print "Printing to nice form."
 		return "Finished displaying content in editor."
 
@@ -242,15 +252,12 @@ def update_content(content):
 	"""
 	print "Modifying only 1 attribute called {0}".format(content)
 	content['data'] = raw_input()
-	print "Connecting to DB"
-	print content
 	start = time.time()
 	success = database.update_content(content)
 	print "end", time.time()-start
 	if success:
 		print "success"
 	else: print "Failure"
-	#TODO -I von -i unterscheiden 
 	return "Finished adding content to DB"
 
 
@@ -272,19 +279,22 @@ def insert_content():
 	
 	start = time.time()
 	db_status = database.create_table(lang)
-	print "Time creating Table:", time.time()-start
+	if db_status:
+		print "Time creating table:", time.time()-start
 
-	if read_config(lang, 'Section2') == False:
-		try:
-			my_input = raw_input(("Enter file extension for language {0} : ").format(lang))
-			write_config({lang : my_input}, 'Section2')
-		except:
-			print "Exception"	
-	
+		if read_config(lang, 'Section2') == False:
+			try:
+				my_input = raw_input(("Enter file extension for language {0} : ").format(lang))
+				write_config({lang : my_input}, 'Section2')
+			except:
+				print "Exception"	
+	else:
+		print "Error while setting up DB"
+
 	if success:	
 		start = time.time()
 		print "Adding {0} to DB".format(content_to_be_added)
-		success = database.add_content(content_to_be_added)
+		success = database.add_content(content_to_be_added, lang)
 		print "Time adding content to DB", time.time()-start
 		return success
 	else:
