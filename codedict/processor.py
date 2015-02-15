@@ -8,6 +8,7 @@ import tempfile
 import time
 import re
 from subprocess import call 
+from textwrap import fill
 
 
 def start_process(args):
@@ -254,29 +255,16 @@ def insert_content():
 	content_to_add = {}
 
 	lang = unicode(raw_input("language: ").strip(), 'utf-8')
-	content_to_add['use_case'] = unicode(raw_input("shortcut: ").strip(), 'utf-8')
-	content_to_add['command'] = unicode(raw_input("command: ").strip(), 'utf-8')
-	content_to_add['comment'] = unicode(raw_input("comment: ").strip(), 'utf-8')
+	content_to_add['use_case'] = fill(unicode(raw_input("shortcut: ").strip(), 'utf-8'), width=20)
+	content_to_add['command'] = fill(unicode(raw_input("command: ").strip(), 'utf-8'), width=25)
+	content_to_add['comment'] = fill(unicode(raw_input("comment: ").strip(), 'utf-8'), width=25)
 	#TODO VALIDATE DATA
-
+	print content_to_add
 	
 	success = True
 	print "Lang", read_config(lang, 'Section2')
 	
-	line_length = 0
 	
-	for item in content_to_add.values():
-		line_length += len(item)
-	print line_length
-
-	cut_length = (80 - len(content_to_add['use_case']) / 2
-	print "cl", cut_length
-
-	if line_length > 75:
-		if len(content_to_add['command']) > cut_length and len(content_to_add['comment']) > cut_length:
-
-			#split both strings in half
-		elif len(content_to_add['comment'] > )
 
 
 
@@ -331,3 +319,10 @@ def process_display_basic_content(location):
 	else:
 		print "No results"
 	return "Finished displaying content with comment."
+
+
+
+
+	
+
+
