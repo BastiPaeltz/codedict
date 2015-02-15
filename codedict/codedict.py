@@ -7,17 +7,16 @@ Usage:
   codedict.py -d <language>
   codedict.py -a <language> <use_case> <attribute>
   codedict.py -a 
-  codedict.py -f <path-to-file> <language> 
+  codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
   codedict.py (-h | --help)
-  codedict.py --version
+  codedict.py --version                   
+              -d          Displays dict content.
+              -a          Adds content to the dict.
+              -c          Display and add code examples.
+              -f          Load content from a file into the dict.
 
 Options:
-
-  -d          Displays dict content.
-  -a          Adds content to the dict.
-  -c          Display and add code examples.
-  -f          Load content from a file into the dict.
   
   -s          Displays comment additionally.
   -e          Displays every value.

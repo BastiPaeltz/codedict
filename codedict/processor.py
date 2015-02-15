@@ -51,7 +51,7 @@ def write_config(args, section):
 	    config.write(configfile)
 
 
-def display_content_nice_form(content, results = False):
+def display_content_nice_form(results):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
@@ -60,7 +60,7 @@ def display_content_nice_form(content, results = False):
 	editor = check_for_editor()
 
 	initial_message = results.get_string()
-
+	
 	with tempfile.NamedTemporaryFile() as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
@@ -142,7 +142,6 @@ def process_code_adding(content):
 
 	"""
 
-
 	existent_code = database.retrieve_code(content)
 	content['data'] = code_input_form(content, existent_code)
 	if content['data'] == existent_code:
@@ -203,32 +202,18 @@ def process_display_content(location, flags):
 		
 		if '-s' in flags:
 			print "Short version requested."
-			all_results = database.retrieve_extended_content(location)
-			if all_results:
-				output = all_results.get_string() 
-				print output
-			else:
-				print "No results"
-			return "Finished displaying content with comment."
+			process_display_extended_content(location)
 		else:
 			print "Only command requested"
-			all_results = database.retrieve_content(location)
-			if all_results:
-				output = all_results.get_string(header=True, padding_width=3)
-				for line in output:
-					print len(line)
-				if output: 
-					print output
-				else:
-					print "No results"
-			else:
-				print "No results"
+			process_display_basic_content(location)
 			return "Finished displaying command."
-	
 	else:
 		print "Displaying all content requested."
 		all_results = database.retrieve_all_content(location)
-		display_content_nice_form(location, all_results)
+		if all_results:
+			display_content_nice_form(all_results)
+		else:
+			print "No results"
 		print "Printing to nice form."
 		return "Finished displaying content in editor."
 
@@ -266,17 +251,36 @@ def insert_content():
 
 	"""
 
-	content_to_be_added = {}
-	content_to_be_added['language'] = unicode(raw_input("language: ").strip(), 'utf-8')
-	content_to_be_added['use_case'] = unicode(raw_input("shortcut: ").strip(), 'utf-8')
-	content_to_be_added['command'] = unicode(raw_input("command: ").strip(), 'utf-8')
-	content_to_be_added['comment'] = unicode(raw_input("comment: ").strip(), 'utf-8')
+	content_to_add = {}
+
+	lang = unicode(raw_input("language: ").strip(), 'utf-8')
+	content_to_add['use_case'] = unicode(raw_input("shortcut: ").strip(), 'utf-8')
+	content_to_add['command'] = unicode(raw_input("command: ").strip(), 'utf-8')
+	content_to_add['comment'] = unicode(raw_input("comment: ").strip(), 'utf-8')
 	#TODO VALIDATE DATA
 
-	lang = content_to_be_added['language']
+	
 	success = True
 	print "Lang", read_config(lang, 'Section2')
 	
+	line_length = 0
+	
+	for item in content_to_add.values():
+		line_length += len(item)
+	print line_length
+
+	cut_length = (80 - len(content_to_add['use_case']) / 2
+	print "cl", cut_length
+
+	if line_length > 75:
+		if len(content_to_add['command']) > cut_length and len(content_to_add['comment']) > cut_length:
+
+			#split both strings in half
+		elif len(content_to_add['comment'] > )
+
+
+
+
 	start = time.time()
 	db_status = database.create_table(lang)
 	if db_status:
@@ -293,11 +297,37 @@ def insert_content():
 
 	if success:	
 		start = time.time()
-		print "Adding {0} to DB".format(content_to_be_added)
-		success = database.add_content(content_to_be_added, lang)
+		print "Adding {0} to DB".format(content_to_add)
+		success = database.add_content(content_to_add, lang)
 		print "Time adding content to DB", time.time()-start
 		return success
 	else:
 		print "error"
 		return False
 
+def process_display_extended_content(location):
+	"""Processes displaying extended content, prints to STDOUT.
+
+	"""
+
+	all_results = database.retrieve_extended_content(location)
+	if all_results:
+		output = all_results.get_string() 
+		print output
+	else:
+		print "No results"
+	return "Finished displaying content with comment."
+
+
+def process_display_basic_content(location):
+	"""Processes displaying basic content, prints to STDOUT by default.
+
+	"""
+
+	all_results = database.retrieve_content(location)
+	if all_results:
+		output = all_results.get_string() 
+		print output
+	else:
+		print "No results"
+	return "Finished displaying content with comment."
