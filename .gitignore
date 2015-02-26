@@ -2,3 +2,4 @@
 *.DB
 *.cfg
 ./codedict.egg-info
+*.txt

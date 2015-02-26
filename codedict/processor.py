@@ -5,8 +5,9 @@
 import database 
 import ConfigParser
 import tempfile
-import time
 import re
+import time
+import prettytable
 from subprocess import call 
 from textwrap import fill
 
@@ -60,6 +61,7 @@ def display_content_nice_form(results):
 
 	editor = check_for_editor()
 
+	print len(results)
 	initial_message = results.get_string()
 	
 	with tempfile.NamedTemporaryFile() as tmpfile:
@@ -163,10 +165,10 @@ def process_file_adding(content):
 		with open(content['<path-to-file>']) as input_file:
 		    text = input_file.read()
 
-		items = re.findall(r'%\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text)	    
-		# for item in items:
-		# 	print item
-		database.add_content(items, content['<language>'], multiple_insert=True)
+		items = re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', text, re.UNICODE)
+		for item in items:
+			print item	    
+	 	database.add_content(items, content['<language>'], multiple_insert=True)
 	else:
 		print "Error creating DB"
 
@@ -255,9 +257,9 @@ def insert_content():
 	content_to_add = {}
 
 	lang = unicode(raw_input("language: ").strip(), 'utf-8')
-	content_to_add['use_case'] = fill(unicode(raw_input("shortcut: ").strip(), 'utf-8'), width=20)
-	content_to_add['command'] = fill(unicode(raw_input("command: ").strip(), 'utf-8'), width=25)
-	content_to_add['comment'] = fill(unicode(raw_input("comment: ").strip(), 'utf-8'), width=25)
+	content_to_add['use_case'] = fill(unicode(raw_input("shortcut: ").strip(), 'utf-8'), width=17)
+	content_to_add['command'] = fill(unicode(raw_input("command: ").strip(), 'utf-8'), width=22)
+	content_to_add['comment'] = fill(unicode(raw_input("comment: ").strip(), 'utf-8'), width=22)
 	#TODO VALIDATE DATA
 	print content_to_add
 	
@@ -299,11 +301,14 @@ def process_display_extended_content(location):
 	"""
 
 	all_results = database.retrieve_extended_content(location)
+	all_results.add_column("ID", [count + 1 for count, _ in enumerate(all_results)])
+
 	if all_results:
 		output = all_results.get_string() 
 		print output
 	else:
 		print "No results"
+
 	return "Finished displaying content with comment."
 
 
@@ -313,9 +318,15 @@ def process_display_basic_content(location):
 	"""
 
 	all_results = database.retrieve_content(location)
+	print all_results
+	
+	result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
+	result_table.hrules = prettytable.ALL
+	for row in all_results:
+		result_table.add_row(list(row))
+
 	if all_results:
-		output = all_results.get_string() 
-		print output
+		print result_table
 	else:
 		print "No results"
 	return "Finished displaying content with comment."

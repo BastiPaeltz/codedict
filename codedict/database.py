@@ -4,7 +4,7 @@
 """
 
 import sqlite3
-from prettytable import from_db_cursor
+from textwrap import fill
 
 
 
@@ -83,8 +83,10 @@ def add_content(values, location, multiple_insert=False):
 				    	INSERT or REPLACE into {0} 
 				    	(use_case, command, comment)
 				    	VALUES(?, ?, ?)
-					'''.format(location), (
-						(values['use_case'], values['command'], values['comment'])))
+					'''.format(location), ( 
+						(values['use_case'], 
+						values['command'], 
+						values['comment'])))
 
 					for items in row: 
 						print "Row", items
@@ -99,7 +101,9 @@ def add_content(values, location, multiple_insert=False):
 					    	(use_case, command, comment)
 					    	VALUES(?, ?, ?)
 						'''.format(location), 
-							((new_item[0], new_item[1], new_item[2])))
+							(fill(new_item[0], width=20), 
+						 	 fill(new_item[1], width=25), 
+						 	 fill(new_item[2], width=25)))
 
 						for items in row: 
 							print "Row", items	 
@@ -120,16 +124,16 @@ def retrieve_extended_content(location):
 	"""Retrieves command, comment from the DB.
 
 	"""
-
+	all_results = []
 	db = establish_db_connection()
 	if db:
-		all_results = []
 		db_execute = db.execute('''
 		    SELECT command, comment FROM {0} where use_case LIKE ?
 		    '''.format(location['<language>']), (location['<use_case>']+'%',))
-		pt = from_db_cursor(db_execute)
+		for count, row in enumerate(db_execute):
+			all_results.append((count + 1, ) + row)
 		db.close()	
-		return pt
+		return all_results
 	else:
 		print "Error while reaching DB."
 		return False
@@ -139,16 +143,17 @@ def retrieve_all_content(location):
 	"""Retrieves all content for 1 specific use_case from the DB.
 
 	"""
-
+	all_results = []
 	db = establish_db_connection()
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
 			    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
 			    '''.format(location['<language>']), (location['<use_case>']+'%',))
-			pt = from_db_cursor(db_execute)
+			for count, row in enumerate(db_execute):
+				all_results.append((count + 1, ) + row)
 			db.close()	
-			return pt
+			return all_results
 		else:
 			print "No such table"
 			return False
@@ -161,16 +166,17 @@ def retrieve_lang_content(location):
 	"""Retrieves content for 1 specified language from the DB.
 
 	"""
-
+	all_results = []
 	db = establish_db_connection()
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
 			    SELECT command, use_case FROM {0} 
 			    '''.format(location['<language>']))
-			pt = from_db_cursor(db_execute)
+			for count, row in enumerate(db_execute):
+				all_results.append((count + 1, ) + row)
 			db.close()	
-			return pt
+			return all_results
 		else:
 			print "No such table"
 			return False
@@ -183,19 +189,17 @@ def retrieve_content(location):
 	"""Retrieves basic content (command) for 1 use_case from the DB.
 
 	"""
-
+	all_results = []
 	db = establish_db_connection()
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
 			    SELECT use_case, command FROM {0} WHERE use_case LIKE ? 
-			    '''.format(location['<language>']), (location['<use_case>'],))
-			if db_execute.fetchone():
-				pt = from_db_cursor(db_execute)
-			else:
-				pt = False
+			    '''.format(location['<language>']), (location['<use_case>']+'%',))
+			for count, row in enumerate(db_execute):
+				all_results.append((count + 1, ) + row)
 			db.close()	
-			return pt
+			return all_results
 		else:
 			print "No such table"
 	else:
@@ -207,16 +211,16 @@ def retrieve_code(location):
 	"""Retrieves code for 1 use_case from the DB.
 
 	"""
-
+	all_results = []
 	db = establish_db_connection() 
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
 			    SELECT code FROM {0} WHERE use_case = ? 
 			    '''.format(location['<language>']), (location['<use_case>'],))
-			all_results = db_execute.fetchone()
-			print all_results
-			db.close() 	 
+			for count, row in enumerate(db_execute):
+				all_results.append((count + 1, ) + row)
+			db.close()	
 			return all_results
 		else:
 			print "No such table"
