@@ -194,8 +194,8 @@ def retrieve_content(location):
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
-			    SELECT use_case, command FROM {0} WHERE use_case LIKE ? 
-			    '''.format(location['<language>']), (location['<use_case>']+'%',))
+			    SELECT ltrim(use_case, ?), command FROM {0} WHERE use_case LIKE ? 
+			    '''.format(location['<language>']), (location['<use_case>'], location['<use_case>']+'%'))
 			for count, row in enumerate(db_execute):
 				all_results.append((count + 1, ) + row)
 			db.close()	

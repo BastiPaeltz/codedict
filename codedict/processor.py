@@ -301,11 +301,15 @@ def process_display_extended_content(location):
 	"""
 
 	all_results = database.retrieve_extended_content(location)
-	all_results.add_column("ID", [count + 1 for count, _ in enumerate(all_results)])
+	
+	result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
+	result_table.hrules = prettytable.ALL
+
+	for row in all_results:
+		result_table.add_row(list(row))
 
 	if all_results:
-		output = all_results.get_string() 
-		print output
+		print result_table
 	else:
 		print "No results"
 
@@ -318,10 +322,10 @@ def process_display_basic_content(location):
 	"""
 
 	all_results = database.retrieve_content(location)
-	print all_results
 	
 	result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
 	result_table.hrules = prettytable.ALL
+
 	for row in all_results:
 		result_table.add_row(list(row))
 
