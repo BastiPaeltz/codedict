@@ -43,7 +43,7 @@ def write_config(args, section):
 
 	"""
 
-	config = ConfigParser.RawConfigParser()
+	config = ConfigParser.RawConfigParser('')
 	if section not in config.sections():
 		config.add_section(section)
 	for key in args:
@@ -100,7 +100,7 @@ def code_input_form(content, existent_code=False):
 		my_suffix = raw_input("Enter suffix for language '{0}':".format(content['<language>']))
 		write_config({content['<language>'] : my_suffix}, 'Section2')
 
-	initial_message = existent_code[0].decode('utf-8')
+	initial_message = existent_code[0][1].decode('utf-8')
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=my_suffix) as tmpfile:
 		if existent_code:
@@ -194,8 +194,11 @@ def process_display_content(location, flags):
 		all_results = database.retrieve_lang_content(location)
 		print "Getting data from DB"
 		if all_results:
-			output = all_results.get_string(header=True, padding_width=3)
-			print output
+			result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
+			result_table.hrules = prettytable.ALL
+			for row in all_results:
+				result_table.add_row(list(row))
+			print result_table
 		else:
 			print "No results"
 		return "Finished displaying all shortcuts for 1 language"  
@@ -205,14 +208,23 @@ def process_display_content(location, flags):
 		
 		if '-s' in flags:
 			print "Short version requested."
-			process_display_extended_content(location)
+			result_table = process_display_extended_content(location)
+			new_target = promptByIndex(result_table)
+			print new_target
+			location['<use_case>'] += new_target
+			process_code_adding(location)
 		else:
 			print "Only command requested"
-			process_display_basic_content(location)
+			result_table = process_display_basic_content(location)
+			new_target = promptByIndex(result_table)
+			print new_target
+			location['<use_case>'] += new_target
+			print location['<use_case>']
+			process_code_adding(location)
 			return "Finished displaying command."
 	else:
-		print "Displaying all content requested."
-		all_results = database.retrieve_all_content(location)
+		print "Displaying entire content requested."
+		all_results = database.retrieve_entire_content(location)
 		if all_results:
 			display_content_nice_form(all_results)
 		else:
@@ -257,19 +269,14 @@ def insert_content():
 	content_to_add = {}
 
 	lang = unicode(raw_input("language: ").strip(), 'utf-8')
-	content_to_add['use_case'] = fill(unicode(raw_input("shortcut: ").strip(), 'utf-8'), width=17)
-	content_to_add['command'] = fill(unicode(raw_input("command: ").strip(), 'utf-8'), width=22)
-	content_to_add['comment'] = fill(unicode(raw_input("comment: ").strip(), 'utf-8'), width=22)
+	content_to_add['<use_case>'] = fill(unicode(raw_input("shortcut: ").strip(), 'utf-8'), width=17)
+	content_to_add['<command>'] = fill(unicode(raw_input("command: ").strip(), 'utf-8'), width=22)
+	content_to_add['<comment>'] = fill(unicode(raw_input("comment: ").strip(), 'utf-8'), width=22)
 	#TODO VALIDATE DATA
 	print content_to_add
 	
 	success = True
 	print "Lang", read_config(lang, 'Section2')
-	
-	
-
-
-
 
 	start = time.time()
 	db_status = database.create_table(lang)
@@ -301,8 +308,8 @@ def process_display_extended_content(location):
 	"""
 
 	all_results = database.retrieve_extended_content(location)
-	
-	result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
+
+	result_table = prettytable.PrettyTable(["ID", "use_case", "command", "code added?"])
 	result_table.hrules = prettytable.ALL
 
 	for row in all_results:
@@ -313,7 +320,7 @@ def process_display_extended_content(location):
 	else:
 		print "No results"
 
-	return "Finished displaying content with comment."
+	return result_table
 
 
 def process_display_basic_content(location):
@@ -323,21 +330,35 @@ def process_display_basic_content(location):
 
 	all_results = database.retrieve_content(location)
 	
-	result_table = prettytable.PrettyTable(["ID", "use_case", "command"])
+	result_table = prettytable.PrettyTable(["ID", "use_case", "command", "code added?"])
 	result_table.hrules = prettytable.ALL
 
 	for row in all_results:
-		result_table.add_row(list(row))
+		row_as_list = list(row)
+		if row_as_list[3]:
+			row_as_list[3] = "yes"
+		else:
+			row_as_list[3] = "no" 
+		result_table.add_row(row_as_list)
 
 	if all_results:
 		print result_table
 	else:
 		print "No results"
-	return "Finished displaying content with comment."
+	return all_results 
 
 
+def promptByIndex(results):
+	"""Prompts the user for further commands after displaying content.
+	   Valid input: <index> 
+	"""
 
-
+	index_input = raw_input().split(" ")
+	if index_input[0].isdigit():
+		if len(index_input) < 2:
+			return results[int(index_input[0])-1][1]
+	else:
+		print "Wrong input"
 	
 
 

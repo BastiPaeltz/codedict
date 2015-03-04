@@ -84,9 +84,9 @@ def add_content(values, location, multiple_insert=False):
 				    	(use_case, command, comment)
 				    	VALUES(?, ?, ?)
 					'''.format(location), ( 
-						(values['use_case'], 
-						values['command'], 
-						values['comment'])))
+						(values['<use_case>'], 
+						values['<command>'], 
+						values['<comment>'])))
 
 					for items in row: 
 						print "Row", items
@@ -139,7 +139,7 @@ def retrieve_extended_content(location):
 		return False
 
 
-def retrieve_all_content(location):
+def retrieve_entire_content(location):
 	"""Retrieves all content for 1 specific use_case from the DB.
 
 	"""
@@ -194,7 +194,7 @@ def retrieve_content(location):
 	if db:
 		if check_for_table_existence(location['<language>'], db):
 			db_execute = db.execute('''
-			    SELECT ltrim(use_case, ?), command FROM {0} WHERE use_case LIKE ? 
+			    SELECT ltrim(use_case, ?), command, code FROM {0} WHERE use_case LIKE ? 
 			    '''.format(location['<language>']), (location['<use_case>'], location['<use_case>']+'%'))
 			for count, row in enumerate(db_execute):
 				all_results.append((count + 1, ) + row)
