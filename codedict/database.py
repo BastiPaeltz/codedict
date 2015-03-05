@@ -10,224 +10,116 @@ from textwrap import fill
 
 
 def establish_db_connection():
-	"""Establishes the connection to the DB."""
+	"""Establishes the connection to the DB.
+	   Returns: DB object or False
+	"""
 
 	try:
 		db = sqlite3.connect('../res/codedict.DB')
 	except sqlite3.DatabaseError:
 		print "Database is encrypted or not a DB file."
 		return False
+		#todo create db in case of failure
 	return db	
 
 
-def update_content(content):
+def update_content(values):
 	"""Changes content of the database.
-
+	   Returns: True or False
 	"""
 
 	db = establish_db_connection() 
-	if db:
-		try:
-			with db:
-				db.execute('''
-			    	UPDATE {0} SET {1} = ? WHERE use_case = ?
-			    '''.format(content['<language>'], 
-			    	content['<attribute>']), 
-			    	(content['data'], 
-			    	content['<use_case>']))
-		except sqlite3.IntegrityError:
-			pass
-		db.close()
-		return True
-	else:
+	
+	if not db:
 		print "Error while reaching DB."
 		return False
+	try:
+		with db:
+			# update database
+			db.execute('''
+		    	UPDATE {0} SET {1} = ? WHERE use_case = ?
+		    '''.format(values['<language>'], 
+		    	values['<attribute>']), 
+		    	(values['data'], 
+		    	values['<use_case>']))
+	except sqlite3.IntegrityError:
+		pass
+	return True
+	
+		
 
 
-def create_table(lang):
+def create_table(language):
 	"""Creates a table for a specific language in the DB.
-
+       Returns: True or False
 	"""
 
 	db = establish_db_connection()
 	
-	if db:
-		try:
-			with db:
-				db.execute('''
-			    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
-			    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
-				'''.format(lang))
-				print "Created table", lang
-		except sqlite3.IntegrityError:
-			print "Cant add element twice"
-			return False
-		db.close()
-		return True		
-	else:
+	if not db:
 		print "Error while reaching DB."
 		return False
+	try:
+		with db:
+			# create table
+			db.execute('''
+		    	CREATE table IF NOT EXISTS {0} (id INTEGER PRIMARY KEY, 
+		    		use_case TEXT, command TEXT, comment TEXT, code TEXT)
+			'''.format(language))
+			print "Created table", language
+	except:
+		#TODO proper exception handling 
+		print "Cant add element twice"
+		return False
+	return True		
 
 
-def add_content(values, location, multiple_insert=False):
+def add_content(values, table_name):
 	"""Adds content to the database.
 
 	"""
 
 	db = establish_db_connection()
-	if db:
-		try:
-			if not multiple_insert:
-				with db:
-					row = db.execute('''
-				    	INSERT or REPLACE into {0} 
-				    	(use_case, command, comment)
-				    	VALUES(?, ?, ?)
-					'''.format(location), ( 
-						(values['<use_case>'], 
-						values['<command>'], 
-						values['<comment>'])))
-
-					for items in row: 
-						print "Row", items
-			#TODO perform proper exception handling
-				return True
-			else:
-				#File adding
-				with db:
-					for new_item in values:
-						row = db.execute('''
-					    	INSERT or REPLACE into {0} 
-					    	(use_case, command, comment)
-					    	VALUES(?, ?, ?)
-						'''.format(location), 
-							(fill(new_item[0], width=20), 
-						 	 fill(new_item[1], width=25), 
-						 	 fill(new_item[2], width=25)))
-
-						for items in row: 
-							print "Row", items	 
-				return True
-
-
-		except sqlite3.IntegrityError:
-			print "Cant add element twice"
-			return False
-		db.close()
-		return True		
-	else:
+	
+	if not db:
 		print "Error while reaching DB."
 		return False
+	try:
+		with db:
+			for new_row in values:
+				rows = db.execute('''
+			    	INSERT or REPLACE into {0} 
+			    	(use_case, command, comment)
+			    	VALUES(?, ?, ?)
+				'''.format(table_name), 
+					(fill(new_row[0], width=17), 
+				 	 fill(new_row[1], width=22), 
+				 	 fill(new_row[2], width=22)))
+				#TODO muss der output sein?
+				for items in rows: 
+					print "Row added: ", items	 
+			return True
+	except sqlite3.IntegrityError:
+		#TODO: Proper exception handling
+		print "Cant add element twice"
+		return False
+	return True		
 
 
-def retrieve_extended_content(location):
+def retrieve_content(location, selection_type):
 	"""Retrieves command, comment from the DB.
-
+	   Returns: List of tuples OR False
 	"""
-	all_results = []
-	db = establish_db_connection()
-	if db:
-		db_execute = db.execute('''
-		    SELECT command, comment FROM {0} where use_case LIKE ?
-		    '''.format(location['<language>']), (location['<use_case>']+'%',))
-		for count, row in enumerate(db_execute):
-			all_results.append((count + 1, ) + row)
-		db.close()	
-		return all_results
-	else:
-		print "Error while reaching DB."
+	
+	db = setup_database(location['<language>'])
+	
+	if not db:
 		return False
 
-
-def retrieve_entire_content(location):
-	"""Retrieves all content for 1 specific use_case from the DB.
-
-	"""
-	all_results = []
-	db = establish_db_connection()
-	if db:
-		if check_for_table_existence(location['<language>'], db):
-			db_execute = db.execute('''
-			    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
-			    '''.format(location['<language>']), (location['<use_case>']+'%',))
-			for count, row in enumerate(db_execute):
-				all_results.append((count + 1, ) + row)
-			db.close()	
-			return all_results
-		else:
-			print "No such table"
-			return False
-	else:
-		print "Error while reaching DB."
-		return False
-
-
-def retrieve_lang_content(location):
-	"""Retrieves content for 1 specified language from the DB.
-
-	"""
-	all_results = []
-	db = establish_db_connection()
-	if db:
-		if check_for_table_existence(location['<language>'], db):
-			db_execute = db.execute('''
-			    SELECT command, use_case FROM {0} 
-			    '''.format(location['<language>']))
-			for count, row in enumerate(db_execute):
-				all_results.append((count + 1, ) + row)
-			db.close()	
-			return all_results
-		else:
-			print "No such table"
-			return False
-	else:
-		print "Error while reaching DB."
-		return False	
+	selection_result = select_from_db(db, location, selection_type)
 		
-
-def retrieve_content(location):
-	"""Retrieves basic content (command) for 1 use_case from the DB.
-
-	"""
-	all_results = []
-	db = establish_db_connection()
-	if db:
-		if check_for_table_existence(location['<language>'], db):
-			db_execute = db.execute('''
-			    SELECT ltrim(use_case, ?), command, code FROM {0} WHERE use_case LIKE ? 
-			    '''.format(location['<language>']), (location['<use_case>'], location['<use_case>']+'%'))
-			for count, row in enumerate(db_execute):
-				all_results.append((count + 1, ) + row)
-			db.close()	
-			return all_results
-		else:
-			print "No such table"
-	else:
-		print "Error while reaching DB."
-		return False
-
-
-def retrieve_code(location):
-	"""Retrieves code for 1 use_case from the DB.
-
-	"""
-	all_results = []
-	db = establish_db_connection() 
-	if db:
-		if check_for_table_existence(location['<language>'], db):
-			db_execute = db.execute('''
-			    SELECT code FROM {0} WHERE use_case = ? 
-			    '''.format(location['<language>']), (location['<use_case>'],))
-			for count, row in enumerate(db_execute):
-				all_results.append((count + 1, ) + row)
-			db.close()	
-			return all_results
-		else:
-			print "No such table"
-			return False
-	else:
-		print "Error while reaching DB."
-		return False
+	all_results = selected_rows_to_list(selection_result)
+	return all_results # returns False if no rows were selected			
 
 
 def check_for_table_existence(table_name, database):
@@ -238,4 +130,85 @@ def check_for_table_existence(table_name, database):
 		    SELECT name FROM sqlite_master WHERE type='table' AND name=?
 		    ''', (table_name, ))
 	return db_execute.fetchone()
+
+
+def selected_rows_to_list(all_rows):
+	"""Packs all results from a SELECT statement into a list of tuples which contain
+	   the field values of the rows.
+	   Returns: list of tuples OR False	
+	"""
+
+	result_list = []
+	for count, row in enumerate(all_rows):
+		result_list.append((count+1), row)
+	if result_list:
+		return result_list
+	else:
+		return False
+
+
+def setup_database(language):
+
+
+	db = establish_db_connection()
+	if not db:
+		print "Error while reaching DB."
+		return False
+	
+	if not check_for_table_existence(language, db):
+		print "No such table"
+		return False
+
+	return db
+
+
+def select_from_db(db, location, selection_type):
+	"""Selects from DB.
+	   Returns: DB cursor Object or False
+
+	"""
+	
+	if not selection_type in ('extended', 'language', 'basic', 'code', 'full'):
+		print "No valid selection type received"
+		return False
+
+	with db:
+	
+		if selection_type == "extended":
+	
+			selection = db.execute('''
+			    SELECT command, comment FROM {0} where use_case LIKE ?
+			    '''.format(location['<language>']), (location['<use_case>']+'%',))
+		
+
+		elif selection_type	== "basic":
+	
+			selection = db.execute('''
+		    SELECT ltrim(use_case, ?), command, code FROM {0} WHERE use_case LIKE ? 
+		    '''.format(location['<language>']), 
+		    (location['<use_case>'], location['<use_case>']+'%'))
+
+
+		elif selection_type == "language":
+
+			selection = db.execute('''
+					    SELECT command, use_case FROM {0} 
+					    '''.format(location['<language>']))
+
+
+		elif selection_type == "code":
+
+			selection = db.execute('''
+			    SELECT code FROM {0} WHERE use_case = ? 
+			    '''.format(location['<language>']), (location['<use_case>'],))
+
+
+		elif selection_type == "full":
+
+			selection = db.execute('''
+		    SELECT use_case, command, comment FROM {0} WHERE use_case LIKE ?
+		    '''.format(location['<language>']), (location['<use_case>']+'%',))
+
+	return selection
+
 
