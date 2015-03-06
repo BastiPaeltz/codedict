@@ -196,10 +196,6 @@ def process_file_adding(content):
 
 	"""
 	
-	db_status = database.create_table(content['<language>'])
-	if not db_status:
-		print "Error creating table"
-		return False
 	try:
 		with open(content['<path-to-file>']) as input_file:
 			file_text = input_file.read()
@@ -262,11 +258,7 @@ def insert_content():
 
 
 	start = time.time()
-	db_status = database.create_table(language)
-	if not db_status:
-		print "Error while setting up table"
-		return False
-
+	
 	print "Time creating table:", time.time()-start
 
 	read_config_write_on_failure(language, 'Suffix')	
