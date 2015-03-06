@@ -177,8 +177,8 @@ def process_code_adding(content, target_code=False):
 
 	content['data'] = code_input_form(content['<language>'], existent_code)
 
-	if content['data'] == existent_code:
-		print 'No DB operation needed, nothing changed'
+	if content['data'] == existent_code or not content['data'].isalnum():
+		return 'No DB operation needed, nothing changed'
 
 	#update DB on change
 	content['<attribute>'] = "code"
@@ -234,8 +234,9 @@ def update_content(content):
 
 	"""
 
-	content['data'] = raw_input("Changing "+content['<attribute>']).strip()
+	content['data'] = unicode(raw_input("Change "+content['<attribute>']+" : ").strip(), 'utf-8')
 	start = time.time()
+	print content
 	success = database.update_content(content)
 	print "end", time.time()-start
 	if success:
@@ -340,6 +341,7 @@ def determine_display_operation(location, flags):
 	
 	process_follow_up_lookup(location, results)
 
+
 def display_extended_content(location):
 	"""Processes display extended content, prints to STDOUT.
 
@@ -348,9 +350,9 @@ def display_extended_content(location):
 	all_results = database.retrieve_content(location, "extended")
 	column_list = ["ID", "use_case", "command", "comment", "code added?"]
 	
-	updated_results = build_table(column_list, all_results)
+	updated_results, table = build_table(column_list, all_results)
 	if len(all_results) < 10:
-		print_to_console(updated_results)
+		print_to_console(table)
 	return updated_results
 
 	 
@@ -376,10 +378,15 @@ def display_full_content(location):
 	"""Processes displaying full content
 
 	"""
-	print "Displaying full content requested."
+
 	all_results = database.retrieve_content(location, "full")
+
+	column_list = ["ID", "use_case", "command", "comment", "code added?"]
+	updated_results, table = build_table(column_list, all_results)	
+
+
 	if all_results:
-		print_content_nice_form(all_results)
+		print_content_nice_form(table)
 	else:
 		print "No results"
 	print "Printing to nice form."
@@ -393,11 +400,11 @@ def display_basic_content(location):
 	"""
 
 	all_results = database.retrieve_content(location, "basic")
-	column_list = ["ID", "use_case", "command", "comment", "code added?"]
+	column_list = ["ID", "use_case", "command", "code added?"]
 	
-	updated_results = build_table(column_list, all_results)
+	updated_results, table = build_table(column_list, all_results)
 	if len(all_results) < 10:
-		print_to_console(updated_results)
+		print_to_console(table)
 	else:
 		choice = raw_input("More than 10 results - do you wish to print to console anyway? (y/n)").strip()
 		if choice in ('y', 'yes', 'Yes', 'Y'):
@@ -424,13 +431,13 @@ def build_table(column_list, all_rows):
 
 	all_rows_as_list = []
 	for row in all_rows:
-		row_as_list = list(row)
-		print row_as_list
-		if row_as_list[cl_length]:
-			row_as_list[cl_length] = "yes"
+		single_row = list(row)
+		print single_row
+		if single_row[cl_length]:
+			single_row[cl_length] = "yes"
 		else:
-			row_as_list[cl_length] = "no" 
-		result_table.add_row(row_as_list)
+			single_row[cl_length] = "no" 
+		result_table.add_row(single_row)
 		all_rows_as_list.append(list(row))
 	return (all_rows_as_list, result_table)
 
@@ -439,19 +446,32 @@ def build_table(column_list, all_rows):
 
 def prompt_by_index(results):
 	"""Prompts the user for further commands after displaying content.
-	   Valid input: <index> 
+	   Valid input: <index> [attirbute] 
 	"""
 
-	index_input = (raw_input(
+	valid_input = False
+	while not valid_input:
+
+		user_input = (raw_input(
 		"Do you want to do further operations on the results? (CTRL-C to abort): ")
 		.strip().split(" "))
-	if index_input[0].isdigit():
-		if len(index_input) < 2:
-			result_index = int(index_input[0])-1
-			return results[result_index]
-	else:
-		print "Wrong input"
-		return False
+		
+		index = user_input[0]
+		try:
+			attribute = user_input[1]
+		except IndexError:
+			attribute = ""
+
+		if len(user_input) <= 2 and index.isdigit() and int(index) >= 1 and int(index) <= len(results):	
+			result_index = int(index)-1
+			valid_input = True
+			if attribute: 
+				if not attribute in ('use_case', 'command', 'comment'):
+					print "Wrong attribute, Please try again."
+					valid_input = False
+		else:
+			print "Wrong index, Please try again."
+	return (results[result_index], attribute) 		
 
 
 def process_follow_up_lookup(original_request, results):
@@ -459,11 +479,20 @@ def process_follow_up_lookup(original_request, results):
 
 	"""
 
-	new_target = prompt_by_index(results)
+	new_target, attribute = prompt_by_index(results)
+
 	if '<use_case>' in original_request:
 		original_request['<use_case>'] += new_target[1]
 	else:
 		original_request['<use_case>'] = new_target[1]
-	return process_code_adding(original_request, target_code=new_target[len(new_target)-1])
-
+	
+	if attribute:
+		print original_request
+		original_request['<attribute>'] = attribute
+		return update_content(original_request)
+	else:
+		target_code = new_target[len(new_target)-1]
+		if not target_code:
+			target_code = "\n"
+		return process_code_adding(original_request, target_code=target_code)
 

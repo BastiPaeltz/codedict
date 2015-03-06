@@ -95,8 +95,8 @@ def update_content(values):
 		    	values['<attribute>']), 
 		    	(values['data'], 
 		    	values['<use_case>']))
-	except sqlite3.IntegrityError:
-		pass
+	except sqlite3.IntegrityError as e:
+		print "error({0}): {1}".format(e.errno, e.strerror)
 	return True
 	
 
@@ -168,7 +168,7 @@ def select_from_db(db, location, selection_type):
 		if selection_type == "extended":
 	
 			selection = db.execute('''
-			    SELECT command, comment, code FROM {0} where use_case LIKE ?
+			    SELECT use_case, command, comment, code FROM {0} where use_case LIKE ?
 			    '''.format(location['<language>']), (location['<use_case>']+'%',))
 		
 
@@ -183,7 +183,7 @@ def select_from_db(db, location, selection_type):
 		elif selection_type == "language":
 
 			selection = db.execute('''
-					    SELECT command, use_case, code FROM {0} 
+					    SELECT use_case, command, code FROM {0} 
 					    '''.format(location['<language>']))
 
 
