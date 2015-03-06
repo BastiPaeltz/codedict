@@ -200,14 +200,16 @@ def process_file_adding(content):
 	if not db_status:
 		print "Error creating table"
 		return False
-
-	with open(content['<path-to-file>']) as input_file:
-	    file_text = input_file.read()
-
+	try:
+		with open(content['<path-to-file>']) as input_file:
+			file_text = input_file.read()
+	except IOError as e:
+		print "I/O error({0}): {1}".format(e.errno, e.strerror)
+		return False
 	#TODO: catch wrong input file
 	#TODO: catch forbidden chars and words
 	all_matches = re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', file_text, re.UNICODE)
-	#TODO: necessary?
+	
 	for single_match in all_matches:
 		print single_match	    
  	database.add_content(all_matches, content['<language>'])

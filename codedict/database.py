@@ -71,7 +71,7 @@ def check_for_table_existence(table_name, database):
 
 	"""
 	db_execute = database.execute('''
-		    SELECT name FROM sqlite_master WHERE type='table' AND name=?
+		    SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?
 		    ''', (table_name, ))
 	return db_execute.fetchone()
 

@@ -8,7 +8,7 @@ Usage:
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
-                 
+
   codedict.py --editor=<editor>
   codedict.py --cut-search=(on|off)
   codedict.py (-h | --help)
@@ -40,7 +40,7 @@ import time
 
 if __name__ == '__main__':
 
-    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v 0.1")
+    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v 0.4")
 
     start = time.time()
     try:
