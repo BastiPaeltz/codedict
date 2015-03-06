@@ -3,6 +3,7 @@
  
 """
 
+#import from standard library
 import sqlite3
 from textwrap import fill
 
@@ -148,8 +149,10 @@ def selected_rows_to_list(all_rows):
 
 
 def setup_database(language):
+	"""Sets up the database for SELECT usage.
 
-
+	"""
+	
 	db = establish_db_connection()
 	if not db:
 		print "Error while reaching DB."
