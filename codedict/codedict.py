@@ -5,23 +5,25 @@ for programming via the command line with ease.
 Usage:
   codedict.py -d <language> <use_case> [-s -e]
   codedict.py -d <language>
-  codedict.py -a <language> <use_case> <attribute>
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
+                 
+  codedict.py --editor=<editor>
+  codedict.py --cut-search=(on|off)
   codedict.py (-h | --help)
-  codedict.py --version                   
-              -d          Displays dict content.
-              -a          Adds content to the dict.
+  codedict.py --version  
+
+              -d          Displays content from dictionary.
+              -a          Adds content to dictionary.
               -c          Display and add code examples.
-              -f          Load content from a file into the dict.
+              -f          Load content from file into the dictionary.
 
 Options:
   
   -s          Displays comment additionally.
   -e          Displays every value.
-  -i          Modify only 1 value.
-  -I          Same as -i but overrrides the value.
+  -i -I       Modify only 1 value.
 
   --help      Show this screen.  
   --version   Show version.

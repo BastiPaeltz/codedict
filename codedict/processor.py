@@ -18,12 +18,12 @@ import subprocess
 ###GENERAL ###
 
 def start_process(cmd_line_args):
-	"""starts processing the command line args.
+	"""Starts processing the command line args. Filters out unrelevant arguments.
 
 	"""
 
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() if value})
-	return check_operation(relevant_args)
+	check_operation(relevant_args)
 
 
 def split_arguments(arguments):
@@ -48,13 +48,13 @@ def check_operation(relevant_args):
 	requested_content, flags = split_arguments(relevant_args)
 
 	if '-f' in flags:
-		return process_file_adding(requested_content)
+		process_file_adding(requested_content)
 	elif '-d' in flags:
-		return determine_display_operation(requested_content, flags)
+		determine_display_operation(requested_content, flags)
 	elif '-a' in flags:
-		return process_add_content(requested_content, flags)
+		process_add_content(requested_content, flags)
 	elif '-c' in flags:
-		return process_code_adding(requested_content)
+		process_code_adding(requested_content)
 	else:
 		print """An unexpected error has occured 
 				while processing {0} with flags {1}
@@ -81,7 +81,7 @@ def read_config_write_on_failure(requested_item, section):
 
 	if not cfg_entry:
 
-		cfg_entry = raw_input("Enter" +requested_item).strip()
+		cfg_entry = raw_input("Enter " +section+" :").strip()
 		if section not in config.sections():
 			config.add_section(section)	
 
@@ -89,7 +89,6 @@ def read_config_write_on_failure(requested_item, section):
 	
 		with open('../res/codedict_config.cfg', 'a') as configfile:
 		    config.write(configfile)
-
 
 	return cfg_entry
 
@@ -108,10 +107,10 @@ def check_for_suffix(language):
 
 	"""
 
-	return read_config_write_on_failure(language, 'Suffixes')
+	return read_config_write_on_failure(language, 'Suffix')
 
 
-###PRINTING ###
+###OUTPUT ###
 
 def print_content_nice_form(results):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
@@ -119,9 +118,9 @@ def print_content_nice_form(results):
 
 	"""
 
-	editor = check_for_editor()
+	editor = [item for item in check_for_editor().split(" ")]
 
-	initial_message = results.get_string()
+	initial_message = results.get_string() #prettytable to string
 	
 	with tempfile.NamedTemporaryFile() as tmpfile:
 		tmpfile.write(initial_message)
@@ -142,16 +141,17 @@ def print_to_console(table):
 
 
 def code_input_form(language, existent_code=False):
-	"""Sets up a nice input form for code adding and viewing.
+	"""Sets up a nice input form (editor) for code adding and viewing.
 
 
 	"""
 
-	editor = check_for_editor()
+	editor = [item for item in check_for_editor().split(" ")]
 
 	language_suffix = check_for_suffix(language)
 
-	initial_message = existent_code[0].decode('utf-8')
+	initial_message = existent_code.decode('utf-8')
+
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=language_suffix) as tmpfile:
 		if existent_code:
@@ -165,28 +165,31 @@ def code_input_form(language, existent_code=False):
 ###CODE ###
 
 
-def process_code_adding(content):
+def process_code_adding(content, target_code=False):
 	"""Processes code adding, provides a nice input form for the user.
 
 	"""
 
-	existent_code = database.retrieve_content(content, "code")
-	
+	if not target_code:
+		existent_code = database.retrieve_content(content, "code")[0]
+	else:
+		existent_code = target_code
+
 	content['data'] = code_input_form(content['<language>'], existent_code)
 
 	if content['data'] == existent_code:
-		return 'No DB operation needed, nothing changed'
+		print 'No DB operation needed, nothing changed'
 
 	#update DB on change
 	content['<attribute>'] = "code"
 	start = time.time()
-	database.add_content(content, content['<language>']) 
+	database.update_content(content) 
 	print "end", time.time()-start 
 	return "Finished adding code to DB"
 
 
 
-###FILE###
+###FILE ###
 
 def process_file_adding(content):
 	"""Processes adding content from a file.
@@ -246,13 +249,14 @@ def insert_content():
 
 	content_to_add = {}
 
-	language = unicode(raw_input("language: ").strip(), 'utf-8')
+	language = raw_input("language: ").strip()
 	language = validate_language(language)
 
-	content_to_add[0] = unicode(raw_input("shortcut: ").strip(), 'utf-8')
-	content_to_add[1] = unicode(raw_input("command: ").strip(), 'utf-8')
-	content_to_add[2] = unicode(raw_input("comment: ").strip(), 'utf-8')
-	content_to_add = validate_content_add(content_to_add)
+
+	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ')): 
+		content_to_add[index] = raw_input(item).strip()
+		content_to_add[index] = validate_content_add(content_to_add[index], item)
+
 
 	start = time.time()
 	db_status = database.create_table(language)
@@ -262,7 +266,7 @@ def insert_content():
 
 	print "Time creating table:", time.time()-start
 
-	read_config_write_on_failure(language, 'Suffixes')	
+	read_config_write_on_failure(language, 'Suffix')	
 
 	start = time.time()
 	print "Adding {0} to DB".format(content_to_add)
@@ -272,7 +276,6 @@ def insert_content():
 	return success
 
 	
-
 def validate_language(language):
 	"""Validates the language string from the user input.
 
@@ -280,25 +283,33 @@ def validate_language(language):
 	#TODO: full list of forbidden chars and words
 	forbidden_chars = (';', ':', '!')
 	forbidden_words = ('select', 'where')
-	while (len(language.split(" ")) > 1) or forbidden_chars in language or forbidden_words in language:
-		language = unicode(raw_input("language (only 1 word): ").strip(), 'utf-8')
-	return language
+	while len(language.split(" ")) > 1 or is_in(forbidden_chars, language) or ( 
+	is_in(forbidden_words, language)):
+		language = raw_input("enter language again: ").strip()
+	return unicode(language, 'utf-8')
 
 
-def validate_content_add(content):
+def validate_content_add(value, string):
 	"""Validates the content strings from the user input.
 
 	"""
 	#TODO: full list of forbidden chars and words
 	forbidden_chars = (';', ':', '!')
 	forbidden_words = ('select', 'where')
-	for key, item in content.iteritems():
-		while forbidden_chars in item or forbidden_words in item:
-			content[key] = unicode(raw_input("language (only 1 word): ").strip(), 'utf-8')
+	while is_in(forbidden_chars, value) or is_in(forbidden_words, value):
+		value = raw_input("enter again - " +string).strip()
+	value = unicode(value, 'utf-8')
+	return value
 
-	return content
 
+def is_in(forbidden_items, text):
+	"""Checks if one of the forbidden items is in text.
 
+	"""
+	for item in forbidden_items:
+		if item in text:
+			return True   
+	return False
 
 
 ### DISPLAYING ###
@@ -310,21 +321,22 @@ def determine_display_operation(location, flags):
 	"""
 
 	if not "<use_case>" in location:
-		display_language_content(location)
+		results = display_language_content(location)
 	
 	elif not '-e' in flags:
 		print "No nice form needed."
 		
 		if '-s' in flags:
 			print "Short version requested."
-			display_extended_content(location)
+			results = display_extended_content(location)
 		else:
 			print "Only command requested"
-			display_basic_content(location)
+			results = display_basic_content(location)
 			
 	else:
-		display_full_content(location)
-
+		results = display_full_content(location)
+	
+	process_follow_up_lookup(location, results)
 
 def display_extended_content(location):
 	"""Processes display extended content, prints to STDOUT.
@@ -337,24 +349,25 @@ def display_extended_content(location):
 	updated_results = build_table(column_list, all_results)
 	if len(all_results) < 10:
 		print_to_console(updated_results)
-	process_follow_up_lookup(location, updated_results)
-	 
+	return updated_results
+
 	 
 def display_language_content(location):
 	"""Processes displaying extended content, prints to STDOUT.
 
 	"""
 
-	all_results = database.retrieve_content(location, "extended")
+	all_results = database.retrieve_content(location, "language")
 
 	
-	column_list = ["ID", "use_case", "command", "comment", "code added?"]
-	updated_results = build_table(column_list, all_results)
+	column_list = ["ID", "use_case", "command", "code added?"]
+	updated_results, table = build_table(column_list, all_results)
 	
-	if len(all_results) > 10:
-		print_to_console(updated_results)  
+	if len(all_results) < 10:
+		print_to_console(table)  
 	else:
-		print_content_nice_form(updated_results)
+		print_content_nice_form(table)
+	return updated_results
 
 
 def display_full_content(location):
@@ -368,7 +381,8 @@ def display_full_content(location):
 	else:
 		print "No results"
 	print "Printing to nice form."
-	return "Finished displaying content in editor."
+	return updated_results
+
 
 
 def display_basic_content(location):
@@ -391,7 +405,7 @@ def display_basic_content(location):
 		else:
 			pass 
 			#TODO: Handle this case
-	process_follow_up_lookup(location, updated_results)
+	return updated_results
 
 
 def build_table(column_list, all_rows):
@@ -401,18 +415,22 @@ def build_table(column_list, all_rows):
 
 	#column list length
 	cl_length = len(column_list)-1
+	print cl_length
 	
 	result_table = prettytable.PrettyTable(column_list)
 	result_table.hrules = prettytable.ALL
 
+	all_rows_as_list = []
 	for row in all_rows:
 		row_as_list = list(row)
+		print row_as_list
 		if row_as_list[cl_length]:
 			row_as_list[cl_length] = "yes"
 		else:
 			row_as_list[cl_length] = "no" 
 		result_table.add_row(row_as_list)
-	return row_as_list
+		all_rows_as_list.append(list(row))
+	return (all_rows_as_list, result_table)
 
 
 ###SECOND ###
@@ -427,7 +445,8 @@ def prompt_by_index(results):
 		.strip().split(" "))
 	if index_input[0].isdigit():
 		if len(index_input) < 2:
-			return results[int(index_input[0])-1][1]
+			result_index = int(index_input[0])-1
+			return results[result_index]
 	else:
 		print "Wrong input"
 		return False
@@ -437,8 +456,12 @@ def process_follow_up_lookup(original_request, results):
 	"""Processes the 2nd operation of the user, e.g. code adding.
 
 	"""
+
 	new_target = prompt_by_index(results)
-	original_request['<use_case>'] += new_target
-	return process_code_adding(original_request)
+	if '<use_case>' in original_request:
+		original_request['<use_case>'] += new_target[1]
+	else:
+		original_request['<use_case>'] = new_target[1]
+	return process_code_adding(original_request, target_code=new_target[len(new_target)-1])
 
 
