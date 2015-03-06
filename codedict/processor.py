@@ -12,7 +12,7 @@ import re
 import time
 import prettytable
 import subprocess
-
+from textwrap import fill
 
 
 ###GENERAL ###
@@ -21,9 +21,12 @@ def start_process(cmd_line_args):
 	"""Starts processing the command line args. Filters out unrelevant arguments.
 
 	"""
-
+	print cmd_line_args
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() if value})
-	check_operation(relevant_args)
+	if not '--editor' in relevant_args:
+		check_operation(relevant_args)
+	else:
+		write_config(relevant_args['--editor'], 'Editor')		
 
 
 def split_arguments(arguments):
@@ -32,10 +35,11 @@ def split_arguments(arguments):
 	"""
 	content, flags = {}, {}
 	for index, item in arguments.iteritems(): 
-		if index in ('-s', '-e', '-I', '-i', '-c', '-a', '-d', '-f'):
+		if index in ('-s', '-e', '-I', '-i', '-c', '-a', '-d', '-f', '--cut'):
 			flags[index] = item
 		else:
 			content[index] = item 
+
 	return (content, flags)
 
 
@@ -64,6 +68,21 @@ def check_operation(relevant_args):
 
 ###CONFIG ###
 
+def write_config(item, section):
+	"""Writes the item to the cfg file in the sepcified section.
+
+	"""
+	config = ConfigParser.RawConfigParser()
+	path_to_cfg = '../res/codedict_config.cfg'
+
+	if section not in config.sections():
+		config.add_section(section)	
+
+	config.set(section, 'editor', item)
+
+	with open('../res/codedict_config.cfg', 'a') as configfile:
+		    config.write(configfile)
+
 def read_config_write_on_failure(requested_item, section):
 	"""Reads the config file, writes if no entry is found.
 
@@ -71,12 +90,12 @@ def read_config_write_on_failure(requested_item, section):
 
 	config = ConfigParser.RawConfigParser()
 	path_to_cfg = '../res/codedict_config.cfg'
-	config.read(path_to_cfg)
+	
 	try:
+		config.read(path_to_cfg)
 		cfg_entry = config.get(section, requested_item)
-	except:
-		#PROPER exception handling
-		print "Exception was raised READ CONFIG"
+	except ConfigParser.Error as error:
+		print "An error has occured: ", error
 		cfg_entry = False
 
 	if not cfg_entry:
@@ -199,15 +218,15 @@ def process_file_adding(content):
 	try:
 		with open(content['<path-to-file>']) as input_file:
 			file_text = input_file.read()
-	except IOError as e:
-		print "I/O error({0}): {1}".format(e.errno, e.strerror)
+	except (OSError, IOError) as error:
+		print "I/O error({0}): {1}".format(error.errno, error.strerror)
 		return False
 	#TODO: catch wrong input file
 	#TODO: catch forbidden chars and words
 	all_matches = re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', file_text, re.UNICODE)
 	
-	for single_match in all_matches:
-		print single_match	    
+	# for single_match in all_matches:
+	# 	print single_match	    
  	database.add_content(all_matches, content['<language>'])
 	
 
@@ -315,26 +334,31 @@ def determine_display_operation(location, flags):
 
 	"""
 
+	cutsearch = False
+	if '--cut' in flags:
+		cutsearch = location['<use_case>'] 
+
 	if not "<use_case>" in location:
-		results = display_language_content(location)
+		results = display_language_content(location, cutsearch)
 	
 	elif not '-e' in flags:
 		print "No nice form needed."
 		
 		if '-s' in flags:
 			print "Short version requested."
-			results = display_extended_content(location)
+			results = display_extended_content(location, cutsearch)
 		else:
 			print "Only command requested"
-			results = display_basic_content(location)
+			results = display_basic_content(location, cutsearch)
 			
 	else:
-		results = display_full_content(location)
+		results = display_full_content(location, cutsearch)
 	
-	process_follow_up_lookup(location, results)
+	if results:
+		process_follow_up_lookup(location, results)
 
 
-def display_extended_content(location):
+def display_extended_content(location, cutsearch):
 	"""Processes display extended content, prints to STDOUT.
 
 	"""
@@ -348,14 +372,18 @@ def display_extended_content(location):
 	return updated_results
 
 	 
-def display_language_content(location):
+def display_language_content(location, cutsearch):
 	"""Processes displaying extended content, prints to STDOUT.
 
 	"""
 
+
 	all_results = database.retrieve_content(location, "language")
 
-	
+	if not all_results:
+		print "No results"
+		return False
+
 	column_list = ["ID", "use_case", "command", "code added?"]
 	updated_results, table = build_table(column_list, all_results)
 	
@@ -366,7 +394,7 @@ def display_language_content(location):
 	return updated_results
 
 
-def display_full_content(location):
+def display_full_content(location, cutsearch):
 	"""Processes displaying full content
 
 	"""
@@ -386,7 +414,7 @@ def display_full_content(location):
 
 
 
-def display_basic_content(location):
+def display_basic_content(location, cutsearch):
 	"""Processes displaying basic content, prints to STDOUT by default.
 
 	"""
@@ -394,7 +422,7 @@ def display_basic_content(location):
 	all_results = database.retrieve_content(location, "basic")
 	column_list = ["ID", "use_case", "command", "code added?"]
 	
-	updated_results, table = build_table(column_list, all_results)
+	updated_results, table = build_table(column_list, all_results, cutsearch)
 	if len(all_results) < 10:
 		print_to_console(table)
 	else:
@@ -409,7 +437,7 @@ def display_basic_content(location):
 	return updated_results
 
 
-def build_table(column_list, all_rows):
+def build_table(column_list, all_rows, cutsearch):
 	"""Builds the PrettyTable and prints it to console.
 
 	"""
@@ -417,6 +445,7 @@ def build_table(column_list, all_rows):
 	#column list length
 	cl_length = len(column_list)-1
 	print cl_length
+	print cutsearch
 	
 	result_table = prettytable.PrettyTable(column_list)
 	result_table.hrules = prettytable.ALL
@@ -425,6 +454,10 @@ def build_table(column_list, all_rows):
 	for row in all_rows:
 		single_row = list(row)
 		print single_row
+		for index in range(1, cl_length - 1): # code doesnt need to be filled
+			if cutsearch:
+				single_row[1] = single_row[1].replace(cutsearch, "", 1) 
+			fill(single_row[index], width=80/(cl_length+1))
 		if single_row[cl_length]:
 			single_row[cl_length] = "yes"
 		else:

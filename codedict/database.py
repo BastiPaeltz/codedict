@@ -5,7 +5,6 @@
 
 #import from standard library
 import sqlite3
-from textwrap import fill
 
 
 
@@ -17,10 +16,9 @@ def establish_db_connection():
 
 	try:
 		db = sqlite3.connect('../res/codedict0_4.DB')
-	except sqlite3.DatabaseError:
-		print "Database is encrypted or not a DB file."
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
 		return False
-		#todo create db in case of failure
 	return db	
 
 
@@ -57,10 +55,8 @@ def create_table(db):
 		    		languageID INTEGER, use_case TEXT, command TEXT, comment TEXT, code TEXT)
 			''')
 
-			print "Created table language"
-	except:
-		#TODO proper exception handling 
-		print "Exception create tabkle"
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
 		return False
 	return True	
 
@@ -85,8 +81,9 @@ def update_content(values):
 		    	(values['data'], 
 		    	values['<use_case>'],
 		    	values['<language>']))
-	except sqlite3.IntegrityError as e:
-		print "error({0}): {1}".format(e.errno, e.strerror)
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
+		return False
 	return True
 	
 
@@ -97,7 +94,6 @@ def add_content(values, lang_name):
 	
 	db = setup_database() 
 
-	
 	if not db:
 		print "Error while reaching DB."
 		return False
@@ -110,21 +106,17 @@ def add_content(values, lang_name):
 			''', (lang_name, ))
 			
 			for new_row in values:
-				rows = db.execute('''
+				db.execute('''
 			    	INSERT or REPLACE into Dictionary 
 			    	(languageID, use_case, command, comment)
 			    	VALUES((SELECT id from Languages where language = ?), ?, ?, ?)
 				''', (lang_name, 
-					 fill(new_row[0], width=17), 
-				 	 fill(new_row[1], width=22), 
-				 	 fill(new_row[2], width=22)))
-				#TODO muss der output sein?
-				for items in rows: 
-					print "Row added: ", items	 
+					 new_row[0],
+					 new_row[1],
+					 new_row[2]))
 			return True
-	except sqlite3.IntegrityError:
-		#TODO: Proper exception handling
-		print "Cant add element twice"
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
 		return False
 	return True		
 
@@ -150,7 +142,7 @@ def retrieve_content(location, selection_type):
 	return selection_result # returns False if no rows were selected			
 
 
-def select_from_db(db, location, selection_type):
+def select_from_db(db, location, selection_type, cutting=False):
 	"""Selects from DB.
 	   Returns: DB cursor Object or False
 
@@ -160,47 +152,52 @@ def select_from_db(db, location, selection_type):
 		print "No valid selection type received"
 		return False
 
-	with db:
-	
-		if selection_type == "extended":
-	
-			selection = db.execute('''
-			    SELECT ltrim(use_case, ?), command, comment code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
-		    	(SELECT id from Languages where language = ?) 
-		    ''', (location['<use_case>'], location['<use_case>']+'%', location['<language>']))
+	try:
+		with db:
 		
+			if selection_type == "extended":
+		
+				selection = db.execute('''
+				    SELECT use_case, command, comment, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
+			    	(SELECT id from Languages where language = ?) 
+			    ''', (location['<use_case>']+'%', location['<language>']))
+			
 
-		elif selection_type	== "basic":
+			elif selection_type	== "basic":
+		
+				selection = db.execute('''
+				    SELECT use_case, command, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
+				    (SELECT id from Languages where language = ?) 
+			    ''', (location['<use_case>']+'%', location['<language>']))
+
+
+			elif selection_type == "language":
+
+				selection = db.execute('''
+			    	SELECT use_case, command, code FROM Dictionary WHERE languageID = 
+			    	(SELECT id from Languages where language = ?) 
+			    ''', (location['<language>'], ))
+
+
+			elif selection_type == "code":
+
+				selection = db.execute('''
+				    SELECT code FROM Dictionary WHERE use_case = ? and languageID = 
+			    	(SELECT id from Languages where language = ?)
+				    ''', (location['<use_case>'], location['<language>']))
+
+
+			elif selection_type == "full":
+
+				selection = db.execute('''
+				    SELECT use_case, command, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
+				    (SELECT id from Languages where language = ?) 
+				''', (location['<use_case>']+'%', location['<language>']))
+
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
+		return False
 	
-			selection = db.execute('''
-			    SELECT ltrim(use_case, ?), command, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
-			    (SELECT id from Languages where language = ?) 
-		    ''', (location['<use_case>'], location['<use_case>']+'%', location['<language>']))
-
-
-		elif selection_type == "language":
-
-			selection = db.execute('''
-		    	SELECT use_case, command, code FROM Dictionary WHERE languageID = 
-		    	(SELECT id from Languages where language = ?) 
-		    ''', (location['<language>'], ))
-
-
-		elif selection_type == "code":
-
-			selection = db.execute('''
-			    SELECT code FROM Dictionary WHERE use_case = ? and languageID = 
-		    	(SELECT id from Languages where language = ?)
-			    ''', (location['<use_case>'], location['<language>']))
-
-
-		elif selection_type == "full":
-
-			selection = db.execute('''
-			    SELECT ltrim(use_case, ?), command, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
-			    (SELECT id from Languages where language = ?) 
-			''', (location['<use_case>'], location['<use_case>']+'%', location['<language>']))
-
 	return selection
 
 
