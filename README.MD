@@ -6,9 +6,6 @@ Ein command line tool für Developer zum Aufbauen einer Enzyklopädie / eines W�
 - proper exception handling for the whole application  
 - refactoring
 - deploy tests  
-- sql injection --> handle bad sqlnames
-- formatting
-- handling of newlines etc. 
  
 - testing every possible scenario  
 - overthink the use case  
@@ -17,6 +14,4 @@ Ein command line tool für Developer zum Aufbauen einer Enzyklopädie / eines W�
 and last but not least, make it runnable on every os / distro. 
 
 
-- numbers for results --> accessing code directly after via unique number
-- cutting search phrase from results --> python_arg gets cut, so the results are printed more nicely
 
