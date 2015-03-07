@@ -157,12 +157,10 @@ def retrieve_content(location, selection_type):
 
 
 	db_selection = select_from_db(db, location, selection_type)
-	print db_selection
 	if not selection_type == "code":	
 		selection_result = selected_rows_to_list(db_selection)
 	else:
 		selection_result = db_selection.fetchone()
-		print selection_result
 	return selection_result # returns False if no rows were selected			
 
 
@@ -238,3 +236,4 @@ def selected_rows_to_list(all_rows):
 		return result_list
 	else:
 		return False
+

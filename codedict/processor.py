@@ -25,8 +25,6 @@ def start_process(cmd_line_args):
 
 	if '--editor' in relevant_args:
 		write_config(relevant_args['--editor'], 'Editor')		
-	elif'--h_line' in relevant_args:
-		write_config(relevant_args['--h_line'], 'Horizontal')
 	else:
 		check_operation(relevant_args)
 
@@ -166,23 +164,13 @@ def print_to_editor(table):
   	return True
 
 
-def print_to_console(table):
-	"""Prints to console.
-
-	"""
-	if table:
-		print table
-	else:
-		print "No results"
-
-
 def process_printing(table, results):
 	"""Processes all priting to console or editor.
 
 	"""
 	decision = decide_where_to_print(results)
 	if decision == 'console':
-		print_to_console(table)
+		print table
 	else:
 		print_to_editor(table) 
 
@@ -193,12 +181,12 @@ def decide_where_to_print(all_results):
 	"""
 
 	if len(all_results) < 10:
-		return "console"
+		return 'console'
 	else:
 		while True:
 			choice = raw_input("More than 10 results - print to console anyway? (y/n)").strip().split(" ")[0]
 			if choice in ('y', 'yes', 'Yes', 'Y'):
-				return build_table
+				return "console"
 			elif choice in ('n', 'no', 'No', 'N'):
 				return "editor"
 			else:
@@ -267,7 +255,6 @@ def process_file_adding(body):
 		print "Error({0}): {1}".format(error.errno, error.strerror)
 		return False
 
-	#TODO: catch forbidden chars and words
 	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|[^\|%]*\|(.*?)\|', 
 		file_text, re.UNICODE))
 	
@@ -333,7 +320,12 @@ def determine_display_operation(body, flags):
 
 	cut_usecase = False
 	if '--cut' in flags:
-		cut_usecase = body['<use_case>'] 
+		cut_usecase = body['<use_case>']
+	
+	if '--hline' in flags:
+		hline = True 
+	else:
+		hline = False
 
 	if not '<use_case>' in body:
 		results = database.retrieve_content(body, "language")
@@ -354,13 +346,15 @@ def determine_display_operation(body, flags):
 		column_list = ["Index", "use case", "command", "comment", "links", "code added?"]
 	
 	if results:
-		table = build_table(column_list, results, cut_usecase)
+		updated_results, table = build_table(column_list, results, cut_usecase, hline)
 		process_printing(table, results)
 	else:
 		print "No results"
+		return False
+	process_follow_up_lookup(body, updated_results)
 
 
-def build_table(column_list, all_rows, cut_usecase):
+def build_table(column_list, all_rows, cut_usecase, hline):
 	"""Builds the PrettyTable and prints it to console.
 
 	"""
@@ -370,7 +364,7 @@ def build_table(column_list, all_rows, cut_usecase):
 	print cl_length
 	
 	result_table = prettytable.PrettyTable(column_list)
-	if read_config('hrules', 'h_rules') == 'on':
+	if hline:
 		result_table.hrules = prettytable.ALL 
 
 	all_rows_as_list = []
