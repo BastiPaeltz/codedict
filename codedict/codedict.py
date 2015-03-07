@@ -9,6 +9,7 @@ Usage:
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
   codedict.py --editor=<editor>
+  codedict.py --h_line=(off|on)
   codedict.py (-h | --help)
   codedict.py --version  
 
@@ -22,7 +23,8 @@ Options:
   -s          Displays comment additionally.
   -e          Displays every value.
   -i -I       Modify only 1 value.
-  --cut        Cutting
+  --cut       Cutting search phrase from output.
+  --hr
 
   --help      Show this screen.  
   --version   Show version.
@@ -35,7 +37,7 @@ from processor import start_process
 
 #import from standard library
 import time
-
+import sys
 
 if __name__ == '__main__':
 
@@ -43,9 +45,9 @@ if __name__ == '__main__':
 
     start = time.time()
     try:
-        program_status = start_process(COMMAND_LINE_ARGS)
-        print program_status
+        start_process(COMMAND_LINE_ARGS)
     except KeyboardInterrupt:
         print "\nAborted!"
+        sys.exit(0)
     finally:
         print "Program ran for:", time.time() - start

@@ -23,10 +23,12 @@ def start_process(cmd_line_args):
 	"""
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() if value})
 
-	if not '--editor' in relevant_args:
-		check_operation(relevant_args)
-	else:
+	if '--editor' in relevant_args:
 		write_config(relevant_args['--editor'], 'Editor')		
+	elif'--h_line' in relevant_args:
+		write_config(relevant_args['--h_line'], 'Horizontal')
+	else:
+		check_operation(relevant_args)
 
 
 def split_arguments(arguments):
@@ -49,37 +51,43 @@ def check_operation(relevant_args):
 
 	"""
 	
-	requested_content, flags = split_arguments(relevant_args)
+	body, flags = split_arguments(relevant_args)
 
 	if '-f' in flags:
-		process_file_adding(requested_content)
+		process_file_adding(body)
 	elif '-d' in flags:
-		determine_display_operation(requested_content, flags)
+		determine_display_operation(body, flags)
 	elif '-a' in flags:
-		process_add_content(requested_content, flags)
+		process_add_content(body, flags)
 	elif '-c' in flags:
-		process_code_adding(requested_content)
+		process_code_adding(body)
 	else:
 		print """An unexpected error has occured 
 				while processing {0} with flags {1}
-				""".format(requested_content, flags)
+				""".format(body, flags)
 		
 
 ###CONFIG ###
 
 def write_config(item, section):
-	"""Writes the item to the cfg file in the sepcified section.
+	"""Writes the item to the cfg file in the specified section.
 
 	"""
 	config = ConfigParser.RawConfigParser()
 	path_to_cfg = '../res/codedict_config.cfg'
 
+	config.read(path_to_cfg)
+
+	print config.sections()
 	if section not in config.sections():
 		config.add_section(section)	
 
-	config.set(section, 'editor', item)
+	try:
+		config.set(section, 'editor', item)
+	except ConfigParser.Error as error:
+		print "ConfigError", error
 
-	with open(path_to_cfg, 'a') as configfile:
+	with open(path_to_cfg, 'w') as configfile:
 		    config.write(configfile)
 
 
@@ -94,9 +102,10 @@ def read_config_write_on_failure(requested_item, section):
 	try:
 		config.read(path_to_cfg)
 		cfg_entry = config.get(section, requested_item)
-	except ConfigParser.Error as error:
-		print "An error has occured: ", error.args[0]
+	except ConfigParser.NoOptionError:
 		cfg_entry = False
+	except ConfigParser.Error as error:
+		print "Unexpected error has occured", error 
 
 	if not cfg_entry:
 
@@ -106,7 +115,7 @@ def read_config_write_on_failure(requested_item, section):
 
 		config.set(section, requested_item, cfg_entry)
 	
-		with open('../res/codedict_config.cfg', 'a') as configfile:
+		with open('../res/codedict_config.cfg', 'w') as configfile:
 		    config.write(configfile)
 
 	return cfg_entry
@@ -131,7 +140,7 @@ def check_for_suffix(language):
 
 ###OUTPUT ###
 
-def print_table_to_editor(table):
+def print_to_editor(table):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
@@ -256,6 +265,7 @@ def update_content(body):
 		success = database.delete_content(body)
 	return success
 
+
 def insert_content():
 	"""Processes how to insert content.
 
@@ -308,17 +318,45 @@ def determine_display_operation(body, flags):
 		process_follow_up_lookup(body, results)
 
 
+def decide_where_to_print(all_results):
+	"""Decides where to print to.
+
+	"""
+
+	if len(all_results) < 10:
+		return "console"
+	else:
+		while True:
+			choice = raw_input("More than 10 results - print to console anyway? (y/n)").strip().split(" ")[0]
+			if choice in ('y', 'yes', 'Yes', 'Y'):
+				return "console"
+			elif choice in ('n', 'no', 'No', 'N'):
+				return "editor"
+			else:
+				continue
+
+
 def display_extended_content(body, cut_display):
 	"""Processes display extended content, prints to STDOUT.
 
 	"""
 
 	all_results = database.retrieve_content(body, "extended")
+
+	if not all_results:
+		print "No results"
+		return False
+
 	column_list = ["Index", "use_case", "command", "comment", "code added?"]
 	
-	updated_results, table = build_table(column_list, all_results, cutsearch)
-	if len(all_results) < 10:
+	updated_results, table = build_table(column_list, all_results, cut_display)
+
+	decision = decide_where_to_print(all_results)
+
+	if decision == 'console':
 		print_to_console(table)
+	else:
+		print_to_editor(table)
 	return updated_results
 
 	 
@@ -326,7 +364,6 @@ def display_language_content(location, cutsearch):
 	"""Processes displaying extended content, prints to STDOUT.
 
 	"""
-
 
 	all_results = database.retrieve_content(location, "language")
 
@@ -337,10 +374,13 @@ def display_language_content(location, cutsearch):
 	column_list = ["Index", "use_case", "command", "code added?"]
 	updated_results, table = build_table(column_list, all_results, cutsearch)
 	
-	if len(all_results) < 10:
-		print_to_console(table)  
+	decision = decide_where_to_print(all_results)
+
+	if decision == 'console':
+		print_to_console(table)
 	else:
-		print_table_to_editor(table)
+		print_to_editor(table)
+
 	return updated_results
 
 
@@ -351,17 +391,19 @@ def display_full_content(location, cutsearch):
 
 	all_results = database.retrieve_content(location, "full")
 
+
+
 	column_list = ["Index", "use_case", "command", "comment", "links", "code added?"]
 	updated_results, table = build_table(column_list, all_results, cutsearch)	
 
 
 	if all_results:
-		print print_table_to_editor(table)
+		print print_to_editor(table)
 	else:
 		print "No results"
-	print "Printing to nice form."
-	return updated_results
+		return False
 
+	return updated_results
 
 
 def display_basic_content(location, cutsearch):
@@ -370,24 +412,26 @@ def display_basic_content(location, cutsearch):
 	"""
 
 	all_results = database.retrieve_content(location, "basic")
+
+	if not all_results:
+		print "No results"
+		return False
+
 	column_list = ["Index", "use_case", "command", "code added?"]
 	
 	updated_results, table = build_table(column_list, all_results, cutsearch)
-	if len(all_results) < 10:
+
+	decision = decide_where_to_print(all_results)
+
+	if decision == 'console':
 		print_to_console(table)
 	else:
-		choice = raw_input("More than 10 results - do you wish to print to console anyway? (y/n)").strip()
-		if choice in ('y', 'yes', 'Yes', 'Y'):
-			print_to_console(updated_results)
-		elif choice in ('n', 'no', 'No', 'N'):
-			print_content_nice_form(updated_results)
-		else:
-			pass 
-			#TODO: Handle this case
+		print_to_editor(table) 
+
 	return updated_results
 
 
-def build_table(column_list, all_rows, cut_use_case):
+def build_table(column_list, all_rows, cut_use_case, user_hrules=False):
 	"""Builds the PrettyTable and prints it to console.
 
 	"""
@@ -397,7 +441,8 @@ def build_table(column_list, all_rows, cut_use_case):
 	print cl_length
 	
 	result_table = prettytable.PrettyTable(column_list)
-	result_table.hrules = prettytable.ALL 
+	if user_hrules:
+		result_table.hrules = prettytable.ALL 
 	#TODO: Make a choice for user
 
 	all_rows_as_list = []
