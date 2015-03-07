@@ -8,7 +8,6 @@ import sqlite3
 
 
 
-
 def establish_db_connection():
 	"""Establishes the connection to the DB.
 	   Returns: DB object or False

@@ -3,7 +3,7 @@ Let's you compile and access your own personal dictionary
 for programming via the command line with ease.
 
 Usage:
-  codedict.py -d <language> <use_case> [-e --cut]
+  codedict.py -d <language> <use_case> [-e -s --cut]
   codedict.py -d <language> 
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
@@ -22,9 +22,8 @@ Options:
   
   -s          Displays comment additionally.
   -e          Displays every value.
-  -i -I       Modify only 1 value.
   --cut       Cutting search phrase from output.
-  --hr
+  --h_line    Choose 'on' if you wish to have a horizontal line in the output. 
 
   --help      Show this screen.  
   --version   Show version.
