@@ -97,6 +97,8 @@ def read_config(item, section):
 
 	config.read(path_to_cfg)
 
+
+	cfg_entry = False
 	try:
 		config.read(path_to_cfg)
 		cfg_entry = config.get(section, item)
@@ -107,7 +109,7 @@ def read_config(item, section):
 	return (config, cfg_entry)
 
 
-def read_config_write_on_failure(requested_item, section):
+def read_config_write_on_failure(requested_item, section, input_prompt):
 	"""Reads the config file, writes if no entry is found.
 
 	"""
@@ -116,7 +118,7 @@ def read_config_write_on_failure(requested_item, section):
 	
 	if not cfg_entry:
 
-		cfg_entry = raw_input("Enter " +section+" :").strip()
+		cfg_entry = raw_input(input_prompt).strip()
 		if section not in config.sections():
 			config.add_section(section)	
 
@@ -133,7 +135,7 @@ def check_for_editor():
 
 	"""
 
-	return read_config_write_on_failure('editor', 'Editor')
+	return read_config_write_on_failure('editor', 'Editor', "Enter your editor: ")
 
 
 def check_for_suffix(language):
@@ -142,7 +144,7 @@ def check_for_suffix(language):
 
 	"""
 
-	return read_config_write_on_failure(language, 'Suffix')
+	return read_config_write_on_failure(language, 'Suffix', "Enter suffix for language '"+language+ "' : ")
 
 
 ###OUTPUT ###
@@ -301,7 +303,8 @@ def insert_content():
 	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ', 'link: ')): 
 		content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
 
-	read_config_write_on_failure(language, 'Suffix')	
+	read_config_write_on_failure(language, 'Suffix', "Enter suffix for language '"+language+ "' : ")
+	
 
 	start = time.time()
 	print "Adding {0} to DB".format(content_to_add)
@@ -352,6 +355,7 @@ def determine_display_operation(body, flags):
 		print "No results"
 		return False
 	process_follow_up_lookup(body, updated_results)
+
 
 
 def build_table(column_list, all_rows, cut_usecase, hline):

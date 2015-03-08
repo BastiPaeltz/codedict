@@ -4,7 +4,7 @@ for programming via the command line with ease.
 
 Usage:
   codedict.py -d <language> <use_case> [-e -s --cut --hline]
-  codedict.py -d <language> 
+  codedict.py -d <language> [-e -s --cut --hline]
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
