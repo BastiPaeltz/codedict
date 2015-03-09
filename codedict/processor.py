@@ -12,6 +12,7 @@ import time
 import prettytable
 import subprocess
 from textwrap import fill
+import sys
 
 
 ###GENERAL ###
@@ -26,10 +27,10 @@ def start_process(cmd_line_args):
 
 	if '--editor' in relevant_args:
 		database = db.Database()
-		database.set_editor(relevant_args['--editor'])	
+		database.set_editor(unicode(relevant_args['--editor'].strip(), 'utf-8'))	
 	elif '--suffix' in relevant_args:
 		database = db.Database()	
-		database.set_suffix(relevant_args['<language>'], relevant_args['--suffix'])
+		database.set_suffix(relevant_args['<language>'].strip(), unicode(relevant_args['--suffix'], 'utf-8'))
 	else:
 		check_operation(relevant_args)
 
@@ -81,7 +82,6 @@ def check_for_suffix(language, database):
 	suffix = database.retrieve_suffix(language)
 
 	if suffix:
-		print suffix
 		return suffix
 	else:
 		input_suffix = raw_input("Enter suffix for language " +language+" : ").strip()
@@ -107,7 +107,7 @@ def check_for_editor(database):
 		database.set_editor(editor_value)
 		editor_string = editor_value
 	else:
-		editor_string = editor_string.decode('ascii', 'ignore')
+		editor_string = editor_string.encode('utf-8')
 	return editor_string
 
 def print_to_editor(table, database):
@@ -122,7 +122,6 @@ def print_to_editor(table, database):
 
 
 	initial_message = table.get_string() #prettytable to string
-	print initial_message
 	with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
@@ -130,7 +129,7 @@ def print_to_editor(table, database):
 	  		subprocess.Popen(editor_list + [tmpfile.name])
 	  	except (OSError, IOError) as error:
 	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_string, error.errno, error.strerror)
-	  		return False
+	  		sys.exit(1)
   	return True
 
 
@@ -174,7 +173,7 @@ def code_input_from_editor(suffix, database, existing_code):
 
 	editor_list = [argument for argument in editor_string.split(" ")]
 
-	initial_message = existing_code.decode('utf-8')
+	initial_message = existing_code.encode('utf-8')
 
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
@@ -185,7 +184,7 @@ def code_input_from_editor(suffix, database, existing_code):
 	  		subprocess.call(editor_list + [tmpfile.name])
 	  	except (OSError, IOError) as error:
 	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_list, error.errno, error.strerror)
-	  		return False
+	  		sys.exit(1)
   	with open(tmpfile.name) as my_file:
   		return my_file.read() 
 
@@ -206,7 +205,7 @@ def process_code_adding(body, database=False, target_code=False):
 		if not existing_code:
 			existing_code = ""
 		else:
-			existing_code = existing_code
+			existing_code = existing_code[0]
 	else:
 		existing_code = target_code
 
@@ -219,7 +218,6 @@ def process_code_adding(body, database=False, target_code=False):
 			break
 		except UnicodeError as error:
 			print error
-	print body['data']
 	if body['data'] == existing_code:
 		print 'No DB operation needed, nothing changed'
 		return False
@@ -366,7 +364,6 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 
 	#column list length
 	cl_length = len(column_list)-1
-	print cl_length
 	
 	result_table = prettytable.PrettyTable(column_list)
 	if hline:
