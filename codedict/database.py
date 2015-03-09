@@ -15,27 +15,15 @@ class Database(object):
 
 	def __init__(self):
 		self.db_path = determine_db_path()
-		self.db_instance = self.setup_database(self.db_path)
+		self.db_instance = establish_db_connection(self.db_path)
+		self.setup_database()
 
 
-	def establish_db_connection(self, db_path):
-		"""Establishes the connection to the DB.
-		   Returns: DB object or False
-		"""
-
-		try:
-			self.db_instance = sqlite3.connect(db_path)
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			return False
-
-
-	def setup_database(self, db_path):
+	def setup_database(self):
 		"""Sets up the database for usage.
 
 		"""
 		
-		self.establish_db_connection(db_path)
 		if not self.db_instance:
 			print "Error while reaching DB."
 			sys.exit(1)
@@ -92,7 +80,7 @@ class Database(object):
 			print "A database error has occured: ", error
 			return False
 
-	def get_editor(self, editor):
+	def get_editor(self):
 		"""Sets the editor.
 
 		"""
@@ -103,7 +91,8 @@ class Database(object):
 				editor = self.db_instance.execute('''
 					SELECT value from Config where configItem = 'editor'
 				''') 
-			return editor.fetchone()[0]
+				print editor
+			return editor.fetchone()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			return False
@@ -119,7 +108,7 @@ class Database(object):
 			with self.db_instance:
 
 				self.db_instance.execute('''
-					INSERT or IGNORE INTO Config (configItem, value) VALUES ('editor, ?)
+					INSERT or IGNORE INTO Config (configItem, value) VALUES ('editor', ?)
 				''', (editor, ))
 
 				self.db_instance.execute('''
@@ -168,14 +157,15 @@ class Database(object):
 
 		try:
 			with self.db_instance:
-				# update database
+
 				self.db_instance.execute('''
-			    	UPDATE Dictionary SET {0} = ? WHERE use_case = ? AND languageID = 
-			    	(SELECT id from Languages where language = ?)
-			    '''.format(values['<attribute>']), 
-			    	(values['data'], 
-			    	values['<use_case>'],
-			    	values['<language>']))
+				INSERT or REPLACE into Dictionary 
+				    	(id, languageID, use_case, {0})
+				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
+				    		(SELECT id from Languages where language = ?)) 
+				    		,(SELECT id from Languages where language = ?),?, ?)
+				'''.format(values['<attribute>']), ((values['<use_case>'],
+			    	  values['<language>'], values['<language>'], values['<use_case>'], values['data'])))
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -189,6 +179,7 @@ class Database(object):
 		"""
 		
 		try:
+			print self.db_instance
 			with self.db_instance:
 				
 				#add language to lang db if not exists
@@ -199,13 +190,16 @@ class Database(object):
 				for new_row in values:
 					self.db_instance.execute('''
 				    	INSERT or REPLACE into Dictionary 
-				    	(languageID, use_case, command, comment, links)
-				    	VALUES((SELECT id from Languages where language = ?), ?, ?, ?, ?)
-					''', (lang_name, 
+				    	(id, languageID, use_case, command, comment)
+				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
+				    		(SELECT id from Languages where language = ?)) 
+				    		,(SELECT id from Languages where language = ?), ?, ?, ?)
+					''', (new_row[0],
+						lang_name,
+						lang_name, 
 						 new_row[0],
 						 new_row[1],
-						 new_row[2],
-						 new_row[3]))
+						 new_row[2],))
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -222,6 +216,7 @@ class Database(object):
 			selection_result = selected_rows_to_list(db_selection)
 		else:
 			selection_result = db_selection.fetchone()
+			print selection_result
 		return selection_result # returns False if no rows were selected			
 
 
@@ -295,5 +290,17 @@ def determine_db_path():
 	"""Determines where the DB is located.
 
 	"""
+	return "../res/codedict_07.DB"
 
 
+def establish_db_connection(db_path):
+	"""Establishes the connection to the DB.
+	   Returns: DB object or False
+	"""
+
+	try:
+		return sqlite3.connect(db_path)
+		
+	except sqlite3.Error as error:
+		print "A database error has occured: ", error
+		return False

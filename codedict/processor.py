@@ -26,7 +26,10 @@ def start_process(cmd_line_args):
 
 	if '--editor' in relevant_args:
 		database = db.Database()
-		database.set_editor(relevant_args['--editor'])		
+		database.set_editor(relevant_args['--editor'])	
+	elif '--suffix' in relevant_args:
+		database = db.Database()	
+		database.set_suffix(relevant_args['<language>'], relevant_args['--suffix'])
 	else:
 		check_operation(relevant_args)
 
@@ -37,7 +40,7 @@ def split_arguments(arguments):
 	"""
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
-		if key in ('-e', '-I', '-i', '-c', '-a', '-d', '-f', '--cut'):
+		if key in ('-e', '-c', '-a', '-d', '-f', '--cut', '--hline', '--suffix'):
 			flags[key] = item
 		else:
 			request[key] = item 
@@ -53,7 +56,7 @@ def check_operation(relevant_args):
 
 	
 	body, flags = split_arguments(relevant_args)
-	database = db.Database("../res/codedict0_6.DB")
+	database = db.Database()
 
 
 	if '-f' in flags:
@@ -65,8 +68,7 @@ def check_operation(relevant_args):
 	elif '-c' in flags:
 		process_code_adding(body, database)
 	else:
-		print """An unexpected error has occured 
-				while processing {0} with flags {1}
+		print """An unexpected error has occured while processing {0} with flags {1}
 				""".format(body, flags)
 
 
@@ -89,31 +91,46 @@ def check_for_suffix(language, database):
 
 ###OUTPUT ###
 
+def check_for_editor(database):
+	"""Checks for editor in the Database.
+
+	"""
+	editor_string = database.get_editor()[0]
+	if not editor_string:
+		while True:
+			try:
+				editor_value = unicode(raw_input("Enter your editor: ").strip(), 'utf-8')
+				break
+			except UnicodeError as error:
+				print error
+
+		database.set_editor(editor_value)
+		editor_string = editor_value
+	else:
+		editor_string = editor_string.decode('ascii', 'ignore')
+	return editor_string
+
 def print_to_editor(table, database):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
 	"""
 
-	editor_string = database.get_editor().decode('utf-8')
-	if editor_string:
-		editor_args = [argument for argument in database.get_editor().decode('utf-8').split(" ")]
-	else:
-		while True:
-			try:
-				editor_value = unicode(raw_input("Enter your editor: "), 'utf-8')
-				break
-			except UnicodeError as error:
-				print error
+	editor_string = check_for_editor(database)
 
-		database.set_editor(editor_value)
+	editor_list = [argument for argument in editor_string.split(" ")]
+
 
 	initial_message = table.get_string() #prettytable to string
 	print initial_message
 	with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
-  		subprocess.call(editor_args + [tmpfile.name])
+		try:
+	  		subprocess.Popen(editor_list + [tmpfile.name])
+	  	except (OSError, IOError) as error:
+	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_string, error.errno, error.strerror)
+	  		return False
   	return True
 
 
@@ -146,22 +163,29 @@ def decide_where_to_print(all_results):
 				continue
 
 
-def code_input_from_editor(language, suffix, existent_code=False):
+def code_input_from_editor(suffix, database, existing_code):
 	"""Sets up a nice input form (editor) for code adding and viewing.
 
 
 	"""
 
-	editor = [argument for argument in check_for_editor().split(" ")]
 
-	initial_message = existent_code.decode('utf-8')
+	editor_string = check_for_editor(database)
+
+	editor_list = [argument for argument in editor_string.split(" ")]
+
+	initial_message = existing_code.decode('utf-8')
 
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
-		if existent_code:
+		if existing_code:
 			tmpfile.write(initial_message)
 		tmpfile.flush()
-  		subprocess.call(editor + [tmpfile.name])
+		try:
+	  		subprocess.call(editor_list + [tmpfile.name])
+	  	except (OSError, IOError) as error:
+	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_list, error.errno, error.strerror)
+	  		return False
   	with open(tmpfile.name) as my_file:
   		return my_file.read() 
 
@@ -178,22 +202,32 @@ def process_code_adding(body, database=False, target_code=False):
 		database = db.Database()
 
 	if not target_code:
-		existing_code = database.retrieve_content(body, "code")[0]
+		existing_code = database.retrieve_content(body, "code")
+		if not existing_code:
+			existing_code = ""
+		else:
+			existing_code = existing_code
 	else:
 		existing_code = target_code
 
 	suffix = check_for_suffix(body['<language>'], database)
-	body['data'] = code_input_from_editor(body['<language>'], suffix, existing_code)
+	body['data'] = code_input_from_editor(suffix, database, existing_code)
 
-	if body['data'] == existing_code or not body['data'].isalnum():
-		return 'No DB operation needed, nothing changed'
-
+	while True:
+		try:
+			body['data'] = unicode(body['data'], 'utf-8')
+			break
+		except UnicodeError as error:
+			print error
+	print body['data']
+	if body['data'] == existing_code:
+		print 'No DB operation needed, nothing changed'
+		return False
 	#update DB on change
 	body['<attribute>'] = "code"
 	start = time.time()
 
-	
-	database.update_body(body) 
+	database.update_content(body) 
 	print "end", time.time()-start 
 	return "Finished adding code to DB"
 
@@ -212,7 +246,7 @@ def process_file_adding(body):
 		print "Error({0}): {1}".format(error.errno, error.strerror)
 		return False
 
-	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|[^\|%]*\|(.*?)\|', 
+	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
 		file_text, re.UNICODE))
 	
 	# for single_match in all_matches:
@@ -267,7 +301,7 @@ def insert_content():
 		except UnicodeError as error:
 			print error
 
-	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ', 'link: ')):
+	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ')):
 		while True:
 			try: 
 				content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
@@ -277,7 +311,6 @@ def insert_content():
 
 	database = db.Database()
 	start = time.time()
-	print "Adding {0} to DB".format(content_to_add)
 	success = database.add_content([content_to_add], language) # db function works best with lists
 	print "Time adding content to DB", time.time()-start
 	return success
@@ -343,7 +376,6 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 
 	for row in all_rows:
 		single_row = list(row)
-		print single_row
 		
 		for index in range(1, cl_length - 1): # code and index dont need to be filled
 			if cut_usecase and index == 1:
@@ -409,12 +441,11 @@ def process_follow_up_lookup(original_body, results, database):
 		original_body['<use_case>'] = target[1]
 	
 	if attribute:
-		print original_body
 		original_body['<attribute>'] = attribute
 		return update_content(original_body, database=database)
 	else:
 		target_code = target[len(target)-1]
 		if not target_code:
-			target_code = "\n"
+			target_code = " "
 		return process_code_adding(original_body, target_code=target_code, database=database)
 

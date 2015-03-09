@@ -10,6 +10,7 @@ Usage:
   codedict.py -c <language> <use_case>
   codedict.py --editor=<editor>
   codedict.py (-h | --help)
+  codedict.py <language> --suffix=<suffix>
   codedict.py --version  
 
               -d          Displays content from dictionary.
