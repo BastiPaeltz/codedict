@@ -4,7 +4,7 @@ for programming via the command line with ease.
 
 Usage:
   codedict.py -d <language> <use_case> [-e -s --cut --hline]
-  codedict.py -d <language> [-e -s --cut --hline]
+  codedict.py -d <language> [-e --cut --hline]
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
@@ -35,7 +35,6 @@ from processor import start_process
 
 #import from standard library
 import time
-import sys
 
 if __name__ == '__main__':
 
@@ -46,6 +45,5 @@ if __name__ == '__main__':
         start_process(COMMAND_LINE_ARGS)
     except KeyboardInterrupt:
         print "\nAborted!"
-        sys.exit(0)
     finally:
         print "Program ran for:", time.time() - start

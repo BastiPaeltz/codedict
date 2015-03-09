@@ -3,10 +3,9 @@
 """
 
 #relative import
-import database 
+import database as db 
 
 #import from standard library
-import ConfigParser
 import tempfile
 import re
 import time
@@ -17,6 +16,8 @@ from textwrap import fill
 
 ###GENERAL ###
 
+
+
 def start_process(cmd_line_args):
 	"""Starts processing the command line args. Filters out unrelevant arguments.
 
@@ -24,7 +25,8 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() if value})
 
 	if '--editor' in relevant_args:
-		write_config(relevant_args['--editor'], 'Editor')		
+		database = db.Database()
+		database.set_editor(relevant_args['--editor'])		
 	else:
 		check_operation(relevant_args)
 
@@ -48,8 +50,11 @@ def check_operation(relevant_args):
 		needs to be handled. 
 
 	"""
+
 	
 	body, flags = split_arguments(relevant_args)
+	database = db.Database("../res/codedict0_6.DB")
+
 
 	if '-f' in flags:
 		process_file_adding(body)
@@ -58,115 +63,61 @@ def check_operation(relevant_args):
 	elif '-a' in flags:
 		process_add_content(body, flags)
 	elif '-c' in flags:
-		process_code_adding(body)
+		process_code_adding(body, database)
 	else:
 		print """An unexpected error has occured 
 				while processing {0} with flags {1}
 				""".format(body, flags)
-		
-
-###CONFIG ###
-
-def write_config(item, section):
-	"""Writes the item to the cfg file in the specified section.
-
-	"""
-	config = ConfigParser.RawConfigParser()
-	path_to_cfg = '../res/codedict_config.cfg'
-
-	config.read(path_to_cfg)
-
-	print config.sections()
-	if section not in config.sections():
-		config.add_section(section)	
-
-	try:
-		config.set(section, 'editor', item)
-	except ConfigParser.Error as error:
-		print "ConfigError", error
-
-	with open(path_to_cfg, 'w') as configfile:
-		    config.write(configfile)
-
-def read_config(item, section):
-	"""Writes the item to the cfg file in the specified section.
-
-	"""
-	config = ConfigParser.RawConfigParser()
-	path_to_cfg = '../res/codedict_config.cfg'
-
-	config.read(path_to_cfg)
 
 
-	cfg_entry = False
-	try:
-		config.read(path_to_cfg)
-		cfg_entry = config.get(section, item)
-	except ConfigParser.NoOptionError:
-		cfg_entry = False
-	except ConfigParser.Error as error:
-		print "Unexpected error has occured", error 
-	return (config, cfg_entry)
-
-
-def read_config_write_on_failure(requested_item, section, input_prompt):
-	"""Reads the config file, writes if no entry is found.
-
-	"""
-
-	config, cfg_entry = read_config(requested_item, section)
-	
-	if not cfg_entry:
-
-		cfg_entry = raw_input(input_prompt).strip()
-		if section not in config.sections():
-			config.add_section(section)	
-
-		config.set(section, requested_item, cfg_entry)
-	
-		with open('../res/codedict_config.cfg', 'w') as configfile:
-		    config.write(configfile)
-
-	return cfg_entry
-
-
-def check_for_editor():
-	"""Checks if the editor is set and if not prompts the user to enter it.
-
-	"""
-
-	return read_config_write_on_failure('editor', 'Editor', "Enter your editor: ")
-
-
-def check_for_suffix(language):
-	"""Checks if the cfg has a suffix for the requested lang, if not 
+def check_for_suffix(language, database):
+	"""Checks if the DB has a suffix for the requested lang, if not 
 	   it prompts to specify one.
 
 	"""
 
-	return read_config_write_on_failure(language, 'Suffix', "Enter suffix for language '"+language+ "' : ")
+	suffix = database.retrieve_suffix(language)
+
+	if suffix:
+		print suffix
+		return suffix
+	else:
+		input_suffix = raw_input("Enter suffix for language " +language+" : ").strip()
+		database.set_suffix(language, input_suffix)
+		return input_suffix
 
 
 ###OUTPUT ###
 
-def print_to_editor(table):
+def print_to_editor(table, database):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
 
 	"""
 
-	editor = [argument for argument in check_for_editor().split(" ")]
+	editor_string = database.get_editor().decode('utf-8')
+	if editor_string:
+		editor_args = [argument for argument in database.get_editor().decode('utf-8').split(" ")]
+	else:
+		while True:
+			try:
+				editor_value = unicode(raw_input("Enter your editor: "), 'utf-8')
+				break
+			except UnicodeError as error:
+				print error
+
+		database.set_editor(editor_value)
 
 	initial_message = table.get_string() #prettytable to string
 	print initial_message
 	with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
-  		subprocess.call(editor + [tmpfile.name])
+  		subprocess.call(editor_args + [tmpfile.name])
   	return True
 
 
-def process_printing(table, results):
+def process_printing(table, results, database):
 	"""Processes all priting to console or editor.
 
 	"""
@@ -174,7 +125,7 @@ def process_printing(table, results):
 	if decision == 'console':
 		print table
 	else:
-		print_to_editor(table) 
+		print_to_editor(table, database) 
 
 
 def decide_where_to_print(all_results):
@@ -195,7 +146,7 @@ def decide_where_to_print(all_results):
 				continue
 
 
-def code_input_from_editor(language, existent_code=False):
+def code_input_from_editor(language, suffix, existent_code=False):
 	"""Sets up a nice input form (editor) for code adding and viewing.
 
 
@@ -203,12 +154,10 @@ def code_input_from_editor(language, existent_code=False):
 
 	editor = [argument for argument in check_for_editor().split(" ")]
 
-	language_suffix = check_for_suffix(language)
-
 	initial_message = existent_code.decode('utf-8')
 
 
-	with tempfile.NamedTemporaryFile(delete=False, suffix=language_suffix) as tmpfile:
+	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existent_code:
 			tmpfile.write(initial_message)
 		tmpfile.flush()
@@ -220,17 +169,21 @@ def code_input_from_editor(language, existent_code=False):
 ###CODE ###
 
 
-def process_code_adding(body, target_code=False):
+def process_code_adding(body, database=False, target_code=False):
 	"""Processes code adding, provides a nice input form for the user.
 
 	"""
+
+	if not database:
+		database = db.Database()
 
 	if not target_code:
 		existing_code = database.retrieve_content(body, "code")[0]
 	else:
 		existing_code = target_code
 
-	body['data'] = code_input_from_editor(body['<language>'], existing_code)
+	suffix = check_for_suffix(body['<language>'], database)
+	body['data'] = code_input_from_editor(body['<language>'], suffix, existing_code)
 
 	if body['data'] == existing_code or not body['data'].isalnum():
 		return 'No DB operation needed, nothing changed'
@@ -238,6 +191,8 @@ def process_code_adding(body, target_code=False):
 	#update DB on change
 	body['<attribute>'] = "code"
 	start = time.time()
+
+	
 	database.update_body(body) 
 	print "end", time.time()-start 
 	return "Finished adding code to DB"
@@ -262,6 +217,7 @@ def process_file_adding(body):
 	
 	# for single_match in all_matches:
 	# 	print single_match	    
+	database = db.Database()
  	database.add_content(all_matches, body['<language>'])
 	
 
@@ -278,13 +234,20 @@ def process_add_content(body, flags):
 		insert_content()
 
 
-def update_content(body):
+def update_content(body, database=False):
 	"""Processes how to update body.
 
 	"""
+	if not database:
+		database = db.Database()
 
 	if body['<attribute>'] != 'DEL': 
-		body['data'] = unicode(raw_input("Change "+body['<attribute>']+" : ").strip(), 'utf-8')
+		while True:
+			try:
+				body['data'] = unicode(raw_input("Change "+body['<attribute>']+" : ").strip(), 'utf-8')
+				break
+			except UnicodeError as error:
+				print error
 		success = database.update_content(body)		
 	else:
 		success = database.delete_content(body)
@@ -297,15 +260,22 @@ def insert_content():
 	"""
 
 	content_to_add = {}
+	while True:
+		try:
+			language = unicode(raw_input("Enter language: ").strip(), 'utf-8')
+			break
+		except UnicodeError as error:
+			print error
 
-	language = unicode(raw_input("Enter language: ").strip(), 'utf-8')
+	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ', 'link: ')):
+		while True:
+			try: 
+				content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
+				break
+			except UnicodeError as error:
+				print error
 
-	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ', 'link: ')): 
-		content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
-
-	read_config_write_on_failure(language, 'Suffix', "Enter suffix for language '"+language+ "' : ")
-	
-
+	database = db.Database()
 	start = time.time()
 	print "Adding {0} to DB".format(content_to_add)
 	success = database.add_content([content_to_add], language) # db function works best with lists
@@ -314,7 +284,7 @@ def insert_content():
 
 
 ### DISPLAYING ###
-
+ 
 
 def determine_display_operation(body, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -330,31 +300,29 @@ def determine_display_operation(body, flags):
 	else:
 		hline = False
 
+	database = db.Database()
+
 	if not '<use_case>' in body:
 		results = database.retrieve_content(body, "language")
 		column_list = ["Index", "use case", "command", "code added?"]
 	
 	elif not '-e' in flags:
 
-		if '-s' in flags:
-			print "Short version requested."
-			results = database.retrieve_content(body, "extended")
-			column_list = ["Index", "use case", "command", "comment", "code added?"]
-		else:
-			print "Only command requested"
-			results = database.retrieve_content(body, "basic")
-			column_list = ["Index", "use case", "command", "code added?"]			
+		print "Only command requested"
+		results = database.retrieve_content(body, "basic")
+		column_list = ["Index", "use case", "command", "code added?"]			
 	else:
 		results = database.retrieve_content(body, "full")
-		column_list = ["Index", "use case", "command", "comment", "links", "code added?"]
+		column_list = ["Index", "use case", "command", "comment", "code added?"]
 	
+
 	if results:
 		updated_results, table = build_table(column_list, results, cut_usecase, hline)
-		process_printing(table, results)
+		process_printing(table, results, database)
 	else:
 		print "No results"
 		return False
-	process_follow_up_lookup(body, updated_results)
+	process_follow_up_lookup(body, updated_results, database)
 
 
 
@@ -428,7 +396,7 @@ def prompt_by_index(results):
 	return (results[actual_index], attribute) 		
 
 
-def process_follow_up_lookup(original_body, results):
+def process_follow_up_lookup(original_body, results, database):
 	"""Processes the 2nd operation of the user, e.g. code adding.
 
 	"""
@@ -443,10 +411,10 @@ def process_follow_up_lookup(original_body, results):
 	if attribute:
 		print original_body
 		original_body['<attribute>'] = attribute
-		return update_content(original_body)
+		return update_content(original_body, database=database)
 	else:
 		target_code = target[len(target)-1]
 		if not target_code:
 			target_code = "\n"
-		return process_code_adding(original_body, target_code=target_code)
+		return process_code_adding(original_body, target_code=target_code, database=database)
 
