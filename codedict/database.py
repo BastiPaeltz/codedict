@@ -11,7 +11,7 @@ import sys
 class Database(object):
 	"""DB.
 
-	"""
+	""" 
 
 	def __init__(self):
 		self.db_path = determine_db_path()
@@ -26,13 +26,13 @@ class Database(object):
 		
 		if not self.db_instance:
 			print "Error while reaching DB."
-			sys.exit(1)
+			sys.exit(1) 
 		
 		if not self.create_table():
 			print "Error while creating DB tables."
 			sys.exit(1)
 
-
+ 
 	def create_table(self):
 		"""Creates tables 'dictionary' and 'languages'.
 	       Returns: True or False
@@ -91,7 +91,6 @@ class Database(object):
 				editor = self.db_instance.execute('''
 					SELECT value from Config where configItem = 'editor'
 				''') 
-				print editor
 			return editor.fetchone()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -133,7 +132,7 @@ class Database(object):
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
 
 	def set_suffix(self, lang_name, suffix):
 		"""Inserts suffix for 1 language into the DB.
@@ -147,10 +146,10 @@ class Database(object):
 			return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
 
 
-	def update_content(self, values):
+	def update_code(self, values):
 		"""Changes content of the dictionary.
 		   Returns: True or False
 		"""
@@ -160,18 +159,40 @@ class Database(object):
 
 				self.db_instance.execute('''
 				INSERT or REPLACE into Dictionary 
-				    	(id, languageID, use_case, {0})
+				    	(id, languageID, use_case, code)
 				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
 				    		,(SELECT id from Languages where language = ?),?, ?)
-				'''.format(values['<attribute>']), ((values['<use_case>'],
-			    	  values['<language>'], values['<language>'], values['<use_case>'], values['data'])))
+				''', (values['<use_case>'],
+					values['<language>'], 
+					values['<language>'], 
+					values['<use_case>'], 
+					values['data']))
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
 		
-		
+
+	def update_content(self, values):
+		"""Changes content of the dictionary.
+		   Returns: True or False
+		"""	
+
+		try:
+			with self.db_instance:
+				# update database
+				self.db_instance.execute('''
+		    	UPDATE Dictionary SET {0} = ? WHERE use_case = ? AND languageID = 
+		    	(SELECT id from Languages where language = ?)
+		    	'''.format(values['<attribute>']), 
+		    	(values['data'], 
+		    	values['<use_case>'],
+		    	values['<language>']))
+				return True
+		except sqlite3.Error as error:
+			print "A database error has occured: ", error
+			sys.exit(1)
 
 	def add_content(self, values, lang_name):
 		"""Adds content to the database.
@@ -179,7 +200,6 @@ class Database(object):
 		"""
 		
 		try:
-			print self.db_instance
 			with self.db_instance:
 				
 				#add language to lang db if not exists
@@ -203,7 +223,7 @@ class Database(object):
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
 
 
 	def retrieve_content(self, location, selection_type):
@@ -216,7 +236,6 @@ class Database(object):
 			selection_result = selected_rows_to_list(db_selection)
 		else:
 			selection_result = db_selection.fetchone()
-			print selection_result
 		return selection_result # returns False if no rows were selected			
 
 
@@ -268,7 +287,7 @@ class Database(object):
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
 		
 
 
@@ -290,7 +309,9 @@ def determine_db_path():
 	"""Determines where the DB is located.
 
 	"""
+	#TODO: fixme
 	return "../res/codedict_07.DB"
+
 
 
 def establish_db_connection(db_path):

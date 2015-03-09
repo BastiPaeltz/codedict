@@ -3,15 +3,14 @@ Let's you compile and access your own personal dictionary
 for programming via the command line with ease.
 
 Usage:
-  codedict.py -d <language> <use_case> [-e -s --cut --hline]
-  codedict.py -d <language> [-e --cut --hline]
+  codedict.py -d <language> [<use_case>] [-e --cut --hline]
   codedict.py -a 
   codedict.py -f <language> <path-to-file>  
   codedict.py -c <language> <use_case>
   codedict.py --editor=<editor>
-  codedict.py (-h | --help)
   codedict.py <language> --suffix=<suffix>
   codedict.py --version  
+  codedict.py (-h | --help)
 
               -d          Displays content from dictionary.
               -a          Adds content to dictionary.

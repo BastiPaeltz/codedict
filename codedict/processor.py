@@ -3,12 +3,11 @@
 """
 
 #relative import
-import database as db 
+import database as db  
 
 #import from standard library
 import tempfile
 import re
-import time
 import prettytable
 import subprocess
 from textwrap import fill
@@ -23,14 +22,18 @@ def start_process(cmd_line_args):
 	"""Starts processing the command line args. Filters out unrelevant arguments.
 
 	"""
-	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() if value})
+	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
+					if value is not False and value is not None})
 
 	if '--editor' in relevant_args:
 		database = db.Database()
-		database.set_editor(unicode(relevant_args['--editor'].strip(), 'utf-8'))	
+		database.set_editor(unicode(relevant_args['--editor'].strip(), 'utf-8'))
+		print "Setting editor {0} successfull.".format(relevant_args['--editor'])
+	
 	elif '--suffix' in relevant_args:
 		database = db.Database()	
 		database.set_suffix(relevant_args['<language>'].strip(), unicode(relevant_args['--suffix'], 'utf-8'))
+		print "Setting suffix {0} for {1} successfull.".format(relevant_args['--suffix'], relevant_args['<language>'])
 	else:
 		check_operation(relevant_args)
 
@@ -69,8 +72,7 @@ def check_operation(relevant_args):
 	elif '-c' in flags:
 		process_code_adding(body, database)
 	else:
-		print """An unexpected error has occured while processing {0} with flags {1}
-				""".format(body, flags)
+		print "An unexpected error has occured while processing {0} with flags {1}".format(body, flags)
 
 
 def check_for_suffix(language, database):
@@ -84,7 +86,7 @@ def check_for_suffix(language, database):
 	if suffix:
 		return suffix
 	else:
-		input_suffix = raw_input("Enter suffix for language " +language+" : ").strip()
+		input_suffix = raw_input("Enter file suffix for language " +language+" : ").strip()
 		database.set_suffix(language, input_suffix)
 		return input_suffix
 
@@ -128,9 +130,8 @@ def print_to_editor(table, database):
 		try:
 	  		subprocess.Popen(editor_list + [tmpfile.name])
 	  	except (OSError, IOError) as error:
-	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_string, error.errno, error.strerror)
+	  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
 	  		sys.exit(1)
-  	return True
 
 
 def process_printing(table, results, database):
@@ -183,7 +184,7 @@ def code_input_from_editor(suffix, database, existing_code):
 		try:
 	  		subprocess.call(editor_list + [tmpfile.name])
 	  	except (OSError, IOError) as error:
-	  		print "Error calling your editor '{0}' - ({1}): {2}".format(editor_list, error.errno, error.strerror)
+	  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
 	  		sys.exit(1)
   	with open(tmpfile.name) as my_file:
   		return my_file.read() 
@@ -219,15 +220,13 @@ def process_code_adding(body, database=False, target_code=False):
 		except UnicodeError as error:
 			print error
 	if body['data'] == existing_code:
-		print 'No DB operation needed, nothing changed'
+		print 'Nothing changed :)'
 		return False
 	#update DB on change
 	body['<attribute>'] = "code"
-	start = time.time()
 
-	database.update_content(body) 
-	print "end", time.time()-start 
-	return "Finished adding code to DB"
+	database.update_code(body) 
+	print "Finished - updated your codedict successfully."
 
 
 ###FILE ###
@@ -241,18 +240,18 @@ def process_file_adding(body):
 		with open(body['<path-to-file>']) as input_file:
 			file_text = input_file.read()
 	except (OSError, IOError) as error:
-		print "Error({0}): {1}".format(error.errno, error.strerror)
+		print "File Error({0}): {1}".format(error.errno, error.strerror)
 		return False
 
 	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
 		file_text, re.UNICODE))
 	
-	# for single_match in all_matches:
-	# 	print single_match	    
+		    
 	database = db.Database()
  	database.add_content(all_matches, body['<language>'])
-	
+ 	print "Finished - updated your codedict successfully."
 
+	
 ###ADD ###
 
 def process_add_content(body, flags):
@@ -280,10 +279,9 @@ def update_content(body, database=False):
 				break
 			except UnicodeError as error:
 				print error
-		success = database.update_content(body)		
+		database.update_content(body)		
 	else:
-		success = database.delete_content(body)
-	return success
+		database.delete_content(body)
 
 
 def insert_content():
@@ -308,10 +306,8 @@ def insert_content():
 				print error
 
 	database = db.Database()
-	start = time.time()
-	success = database.add_content([content_to_add], language) # db function works best with lists
-	print "Time adding content to DB", time.time()-start
-	return success
+	database.add_content([content_to_add], language) # db function works best with lists
+	print "Finished - updated your codedict successfully."
 
 
 ### DISPLAYING ###
@@ -339,7 +335,6 @@ def determine_display_operation(body, flags):
 	
 	elif not '-e' in flags:
 
-		print "Only command requested"
 		results = database.retrieve_content(body, "basic")
 		column_list = ["Index", "use case", "command", "code added?"]			
 	else:
@@ -350,10 +345,10 @@ def determine_display_operation(body, flags):
 	if results:
 		updated_results, table = build_table(column_list, results, cut_usecase, hline)
 		process_printing(table, results, database)
+		process_follow_up_lookup(body, updated_results, database)
 	else:
-		print "No results"
-		return False
-	process_follow_up_lookup(body, updated_results, database)
+		print "No results."
+		
 
 
 
@@ -377,6 +372,8 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 		for index in range(1, cl_length - 1): # code and index dont need to be filled
 			if cut_usecase and index == 1:
 				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
+			if not single_row[index]:
+				single_row[index] = ""
 			single_row[index] = fill(single_row[index], width=80/(cl_length+1))
 
 		#if code is present, print "yes", else "no"	
@@ -399,7 +396,7 @@ def prompt_by_index(results):
 	   Valid input: <index> [attribute] 
 	"""
 
-	valid_input = False
+	valid_input = False 
 
 	while not valid_input:
 
