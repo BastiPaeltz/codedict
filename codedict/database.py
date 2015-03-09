@@ -310,7 +310,14 @@ def determine_db_path():
 
 	"""
 	#TODO: fixme
-	return "../res/codedict_v071.DB"
+
+	if sys.platform == 'win32':
+		return "../data/codedict_db.DB"
+	elif sys.platform == 'linux2':
+		return "/res/codedict_db.DB"
+	else:
+		print "Your system is not supported."
+		sys.exit(1) 
 
 
 

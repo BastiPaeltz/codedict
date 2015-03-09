@@ -4,11 +4,11 @@
 
 #relative import
 import database as db  
+import prettytable
 
 #import from standard library
 import tempfile
 import re
-import prettytable
 import subprocess
 from textwrap import fill
 import sys
