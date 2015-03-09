@@ -6,7 +6,8 @@
 
 **codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it.   Lightweight, locally stored - your data are yours - and easy to use, you can create your own *reference*, *documentation* or *dictionary* for development with codedict in no time.   
   
-For every 'vocabulary' codedict defines 5 values:  
+    For every 'vocabulary' codedict defines 5 values:  
+
   * The actual (programming) **language** - 'python' for instance  
   * The **use case** - What do you want to do? - 'adding element to a list' for instance  
   * The **command** - How do you accomplish that? - 'list.append(element)' for instance  
