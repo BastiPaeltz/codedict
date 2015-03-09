@@ -310,7 +310,7 @@ def determine_db_path():
 
 	"""
 	#TODO: fixme
-	return "../res/codedict_07.DB"
+	return "../res/codedict_v071.DB"
 
 
 
