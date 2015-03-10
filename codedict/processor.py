@@ -12,7 +12,7 @@ import re
 import subprocess
 from textwrap import fill
 import sys
-
+import os
 
 ###GENERAL ###
 
@@ -97,7 +97,7 @@ def check_for_editor(database):
 	"""Checks for editor in the Database.
 
 	"""
-	editor_string = database.get_editor()[0]
+	editor_string = database.get_editor()
 	if not editor_string:
 		while True:
 			try:
@@ -109,7 +109,7 @@ def check_for_editor(database):
 		database.set_editor(editor_value)
 		editor_string = editor_value
 	else:
-		editor_string = editor_string.encode('utf-8')
+		editor_string = editor_string[0].encode('utf-8')
 	return editor_string
 
 def print_to_editor(table, database):
@@ -180,15 +180,22 @@ def code_input_from_editor(suffix, database, existing_code):
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_code:
 			tmpfile.write(initial_message)
-		tmpfile.flush()
+		        tmpfile.flush()
+		file_name = tmpfile.name
+
 		try:
-	  		subprocess.call(editor_list + [tmpfile.name])
+	  		subprocess.Popen(editor_list + [tmpfile.name])
+			tmpfile.close()
 	  	except (OSError, IOError) as error:
 	  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
 	  		sys.exit(1)
-  	with open(tmpfile.name) as my_file:
-  		return my_file.read() 
-
+		if raw_input("Done?"):
+			with open(file_name) as my_file:
+				try:
+					return my_file.read()
+				except (IOError, OSError) as error:
+					print error
+					sys.exit(1)
 
 ###CODE ###
 
