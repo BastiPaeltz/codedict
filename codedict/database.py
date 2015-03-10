@@ -149,7 +149,7 @@ class Database(object):
 			sys.exit(1)
 
 
-	def update_code(self, values):
+	def upsert_code(self, values):
 		"""Changes content of the dictionary.
 		   Returns: True or False
 		"""
@@ -219,14 +219,11 @@ class Database(object):
 				    	INSERT or REPLACE into Dictionary 
 				    	(id, languageID, use_case, command, comment, code)
 				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)) 
-				    		,(SELECT id from Languages where language = ?), ?, ?, ?,
+				    		(SELECT id from Languages where language = ?)), 
+				    		(SELECT id from Languages where language = ?), ?, ?, ?,
 				    		COALESCE((SELECT code from Dictionary where use_case = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)), '')
-					)
-					''', (new_row[0], lang_name, lang_name, new_row[0] 
-						 new_row[1], new_row[2], new_row[0], lang_name
-						 ))
+				    		(SELECT id from Languages where language = ?)), ''))
+					''', (new_row[0], lang_name, lang_name, new_row[0], new_row[1], new_row[2], new_row[0], lang_name))
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error

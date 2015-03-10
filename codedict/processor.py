@@ -124,7 +124,7 @@ def print_to_editor(table, database):
 
 
 	initial_message = table.get_string() #prettytable to string
-	with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+	with tempfile.TemporaryFile() as tmpfile:
 		tmpfile.write(initial_message)
 		tmpfile.flush()
 		try:
@@ -205,15 +205,14 @@ def code_input_from_editor(suffix, database, existing_code):
 		with open(file_name) as my_file:
 			try:
 				file_output = my_file.read()
-				myfile.close()
-				os.remove(file_name)
 			except (IOError, OSError) as error:
 				print error
 				sys.exit(1)
-			except:
+			except :
 				print "An unexpected error has occured."
 				sys.exit(1)
-
+		
+		os.remove(file_name)
 		return file_output
 
 ###CODE ###
@@ -250,7 +249,7 @@ def process_code_adding(body, database=False, target_code=False):
 	#update DB on change
 	body['<attribute>'] = "code"
 
-	database.update_code(body) 
+	database.upsert_code(body) 
 	print "Finished - updated your codedict successfully."
 
 
@@ -402,7 +401,7 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
 			if not single_row[index]:
 				single_row[index] = ""
-			single_row[index] = fill(single_row[index], width=80/(cl_length+1))
+			single_row[index] = fill(single_row[index], width=75/(cl_length+1))
 
 		#if code is present, print "yes", else "no"	
 		if single_row[cl_length]:
@@ -430,7 +429,7 @@ def prompt_by_index(results):
 
 		user_input = (raw_input(
 		"Do you want to do further operations on the results? (CTRL-C to abort): ")
-		.strip().split(" "))
+		.strip().split(None, 1))
 		
 		index = user_input[0]
 		try:
@@ -457,7 +456,6 @@ def process_follow_up_lookup(original_body, results, database):
 
 	target, attribute = prompt_by_index(results)
 
-	print original_body
 	if '<use_case>' in original_body:
 		original_body['<use_case>'] = target[1]
 	
