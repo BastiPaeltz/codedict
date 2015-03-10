@@ -3,26 +3,29 @@ Let's you compile and access your own personal dictionary
 for programming via the command line with ease.
 
 Usage:
-  codedict -d <language> [<use_case>] [-e --cut --hline]
+  codedict -d LANGUAGE [USAGE] [-e --cut --hline]
   codedict -a 
-  codedict -f <language> <path-to-file>  
-  codedict -c <language> <use_case>
-  codedict --editor=<editor>
-  codedict <language> --suffix=<suffix>
+  codedict -f LANGUAGE PATH-TO-FILE  
+  codedict -c LANGUAGE USAGE
+  codedict --editor EDITOR
+  codedict LANGUAGE --suffix SUFFIX
   codedict --version  
   codedict (-h | --help)
 
--d          Displays content from dictionary.
--a          Adds content to dictionary.
--c          Display and add code examples.
--f          Load content from file into the dictionary.
-
 Options:
+
+  -d          Displays content from codedict.
+  -a          Adds content to codedict.
+  -c          Display and add code (examples).
+  -f          Load content from file into codedict.
   
-  -s          Displays comment additionally.
   -e          Displays every value.
-  --cut       Cutting search phrase from output.
-  --h_line    Choose 'on' if you wish to have a horizontal line in the output. 
+
+  --editor    Sets your editor to the specified value. This has to be an executable.
+  --suffix    Sets the specified suffix for the language. This is convenient for
+              syntax highlighting inside editors.  
+  --cut       Cutting search phrase from the output's usage. 
+  --hline     Prints a horizontal line between each row of the output table. 
 
   --help      Show this screen.  
   --version   Show version.

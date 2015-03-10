@@ -17,11 +17,11 @@ import os
 ###GENERAL ###
 
 
-
 def start_process(cmd_line_args):
-	"""Starts processing the command line args. Filters out unrelevant arguments.
-
+	"""Starts processing the command line args. 
+	   Filters out unrelevant arguments.
 	"""
+
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
@@ -32,16 +32,18 @@ def start_process(cmd_line_args):
 	
 	elif '--suffix' in relevant_args:
 		database = db.Database()	
-		database.set_suffix(relevant_args['<language>'].strip(), unicode(relevant_args['--suffix'], 'utf-8'))
-		print "Setting suffix {0} for {1} successfull.".format(relevant_args['--suffix'], relevant_args['<language>'])
+		database.set_suffix(relevant_args['LANGUAGE'].strip(), unicode(relevant_args['--suffix'], 'utf-8'))
+		print "Setting suffix {0} for {1} successfull.".format((
+			relevant_args['--suffix'], relevant_args['LANGUAGE']))
 	else:
-		check_operation(relevant_args)
+		determine_proceeding(relevant_args)
 
 
 def split_arguments(arguments):
 	"""Splits the given arguments from the command line in content and flags.
 
 	"""
+
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
 		if key in ('-e', '-c', '-a', '-d', '-f', '--cut', '--hline', '--suffix'):
@@ -52,16 +54,12 @@ def split_arguments(arguments):
 	return (request, flags)
 
 
-def check_operation(relevant_args):
+def determine_proceeding(relevant_args):
 	""" Checks which operation (add, display, ...)
 		needs to be handled. 
-
 	"""
 
-	
 	body, flags = split_arguments(relevant_args)
-	database = db.Database()
-
 
 	if '-f' in flags:
 		process_file_adding(body)
@@ -76,9 +74,8 @@ def check_operation(relevant_args):
 
 
 def check_for_suffix(language, database):
-	"""Checks if the DB has a suffix for the requested lang, if not 
+	"""Checks if the DB has a suffix for the requested language, if not 
 	   it prompts to specify one.
-
 	"""
 
 	suffix = database.retrieve_suffix(language)
@@ -97,35 +94,38 @@ def check_for_editor(database):
 	"""Checks for editor in the Database.
 
 	"""
-	editor_string = database.get_editor()
-	if not editor_string:
-		while True:
+
+	editor_unicode = database.get_editor()
+
+	if not editor_unicode:
+		valid_input = False
+		while not valid_input:
 			try:
 				editor_value = unicode(raw_input("Enter your editor: ").strip(), 'utf-8')
-				break
+				valid_input = True
 			except UnicodeError as error:
 				print error
-
 		database.set_editor(editor_value)
-		editor_string = editor_value
+		editor_value = editor_value.encode('utf-8')
 	else:
-		editor_string = editor_string[0].encode('utf-8')
-	return editor_string
+		editor_value = editor_unicode[0].encode('utf-8')
+
+	return editor_value
+
 
 def print_to_editor(table, database):
 	"""Sets up a nice input form (editor) for viewing a large amount of content. -> Read only
 
-
 	"""
 
-	editor_string = check_for_editor(database)
+	editor_value = check_for_editor(database)
 
-	editor_list = [argument for argument in editor_string.split(" ")]
+	editor_list = [argument for argument in editor_value.split(" ")]
 
+	prewritten_data = table.get_string() # prettytable to string
 
-	initial_message = table.get_string() #prettytable to string
 	with tempfile.TemporaryFile() as tmpfile:
-		tmpfile.write(initial_message)
+		tmpfile.write(prewritten_data)
 		tmpfile.flush()
 		try:
 	  		subprocess.Popen(editor_list + [tmpfile.name])
@@ -145,15 +145,16 @@ def process_printing(table, results, database):
 		print_to_editor(table, database) 
 
 
-def decide_where_to_print(all_results):
+def decide_where_to_print(results):
 	"""Decides where to print to.
 
 	"""
-
-	if len(all_results) < 10:
+	#TODO: Let user decide
+	if len(results) < 10:
 		return 'console'
 	else:
-		while True:
+		valid_input = False
+		while not valid_input:
 			choice = raw_input("More than 10 results - print to console anyway? (y/n)").strip().split(" ")[0]
 			if choice in ('y', 'yes', 'Yes', 'Y'):
 				return "console"
@@ -169,56 +170,60 @@ def code_input_from_editor(suffix, database, existing_code):
 
 	"""
 
+	editor_value = check_for_editor(database)
 
-	editor_string = check_for_editor(database)
+	editor_list = [argument for argument in editor_value.split(" ")]
 
-	editor_list = [argument for argument in editor_string.split(" ")]
-
-	initial_message = existing_code.encode('utf-8')
-
+	prewritten_data = existing_code.encode('utf-8')
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_code:
-			tmpfile.write(initial_message)
+			tmpfile.write(prewritten_data)
 		    	tmpfile.flush()
 		file_name = tmpfile.name
 
-		if sys.platform == "win32": #windows doing windows things
+		if sys.platform == "win32": # windows doing windows things
 			try:
 	  			subprocess.Popen(editor_list + [tmpfile.name])
 	  		except (OSError, IOError) as error:
 	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
 	  			sys.exit(1)
 			tmpfile.close()
-			while True:
+
+			valid_input = False
+			while not valid_input:
 			 	if raw_input("Are you done adding code? (y/n): ") != 'n':
-			 		break
+			 		valid_input = True
 			 	else:
 			 		continue
-		else:
+		else: 	# platform != windows
 			try:
 	  			subprocess.call(editor_list + [tmpfile.name])
 	  		except (OSError, IOError) as error:
 	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
 	  			sys.exit(1)
 
+	  	# no matter what platform from now on
 		with open(file_name) as my_file:
 			try:
 				file_output = my_file.read()
 			except (IOError, OSError) as error:
 				print error
 				sys.exit(1)
-			except :
+			except:
 				print "An unexpected error has occured."
 				sys.exit(1)
-		
-		os.remove(file_name)
+		try:
+			os.remove(file_name)
+		except OSError:
+			print "Couldn't delete temporary file."
+
 		return file_output
+
 
 ###CODE ###
 
-
-def process_code_adding(body, database=False, target_code=False):
+def process_code_adding(body, database=False, code_of_target=False):
 	"""Processes code adding, provides a nice input form for the user.
 
 	"""
@@ -226,16 +231,17 @@ def process_code_adding(body, database=False, target_code=False):
 	if not database:
 		database = db.Database()
 
-	if not target_code:
+	# If code isn't already retrieved (code_of_target), retrieve from DB. 
+	if not code_of_target:
 		existing_code = database.retrieve_content(body, "code")
 		if not existing_code:
 			existing_code = ""
 		else:
-			existing_code = existing_code[0]
+			existing_code = existing_code[0] 	  
 	else:
-		existing_code = target_code
+		existing_code = code_of_target
 
-	suffix = check_for_suffix(body['<language>'], database)
+	suffix = check_for_suffix(body['LANGUAGE'], database)
 	body['data'] = code_input_from_editor(suffix, database, existing_code)
 
 	try:
@@ -244,12 +250,11 @@ def process_code_adding(body, database=False, target_code=False):
 		print error
 
 	if body['data'] == existing_code:
-		print 'Nothing changed :)'
-		return False
-	#update DB on change
-	body['<attribute>'] = "code"
+		print 'Nothing changed :)'		
+	else:
+		body['attribute'] = "code"
+		database.upsert_code(body) 
 
-	database.upsert_code(body) 
 	print "Finished - updated your codedict successfully."
 
 
@@ -261,18 +266,17 @@ def process_file_adding(body):
 	"""
 	
 	try:
-		with open(body['<path-to-file>']) as input_file:
+		with open(body['PATH-TO-FILE']) as input_file:
 			file_text = input_file.read()
 	except (OSError, IOError) as error:
 		print "File Error({0}): {1}".format(error.errno, error.strerror)
-		return False
+		sys.exit(1)
 
 	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
 		file_text, re.UNICODE))
 	
-		    
 	database = db.Database()
- 	database.add_content(all_matches, body['<language>'])
+ 	database.add_content(all_matches, body['LANGUAGE'])
  	print "Finished - updated your codedict successfully."
 
 	
@@ -290,17 +294,18 @@ def process_add_content(body, flags):
 
 
 def update_content(body, database=False):
-	"""Processes how to update body.
+	"""Processes how to update content.
 
 	"""
 	if not database:
 		database = db.Database()
 
-	if body['<attribute>'] != 'DEL': 
-		while True:
+	if body['attribute'] != 'DEL': 
+		valid_input = False
+		while not valid_input:
 			try:
-				body['data'] = unicode(raw_input("Change "+body['<attribute>']+" : ").strip(), 'utf-8')
-				break
+				body['data'] = unicode(raw_input("Change "+body['attribute']+" : ").strip(), 'utf-8')
+				valid_input = True
 			except UnicodeError as error:
 				print error
 		database.update_content(body)		
@@ -314,23 +319,26 @@ def insert_content():
 	"""
 
 	content_to_add = {}
-	while True:
+
+	valid_input = False
+	while not valid_input:
 		try:
 			language = unicode(raw_input("Enter language: ").strip(), 'utf-8')
-			break
+			valid_input = True
 		except UnicodeError as error:
 			print error
 
-	for index, item in enumerate(('shortcut: ', 'command: ', 'comment: ')):
-		while True:
+	for index, item in enumerate(('usage: ', 'execution: ', 'comment: ')):
+		valid_input = False
+		while not valid_input:
 			try: 
 				content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
-				break
+				valid_input = True
 			except UnicodeError as error:
 				print error
 
 	database = db.Database()
-	database.add_content([content_to_add], language) # db function works best with lists
+	database.add_content([content_to_add], language) # db method works best with lists
 	print "Finished - updated your codedict successfully."
 
 
@@ -342,10 +350,12 @@ def determine_display_operation(body, flags):
 
 	"""
 
-	cut_usecase = False
-	if '--cut' in flags and '<use_case>' in body:
-		cut_usecase = body['<use_case>']
 	
+	if '--cut' in flags and 'USAGE' in body:
+		cut_usecase = body['USAGE']
+	else:
+		cut_usecase = False
+
 	if '--hline' in flags:
 		hline = True 
 	else:
@@ -354,37 +364,33 @@ def determine_display_operation(body, flags):
 	database = db.Database()
 
 	if '-e' in flags:
-		if not '<use_case>' in body:
-			body['<use_case>'] = ""
+		if not 'USAGE' in body:
+			body['USAGE'] = ""
 		results = database.retrieve_content(body, "full")
-		column_list = ["Index", "use case", "command", "comment", "code added?"]
+		column_list = ["Index", "usage", "execution", "comment", "code added?"]
 	
-	elif not '<use_case>' in body:
-
+	elif not 'USAGE' in body:
 		results = database.retrieve_content(body, "language")
-		column_list = ["Index", "use case", "command", "code added?"]			
-	
+		column_list = ["Index", "usage", "execution", "code added?"]			
+
 	else:
 		results = database.retrieve_content(body, "basic")
-		column_list = ["Index", "use case", "command", "code added?"]
+		column_list = ["Index", "usage", "execution", "code added?"]
 	
-
 	if results:
 		updated_results, table = build_table(column_list, results, cut_usecase, hline)
 		process_printing(table, results, database)
-		process_follow_up_lookup(body, updated_results, database)
+		process_follow_up_operation(body, updated_results, database)
 	else:
 		print "No results."
 		
 
-
-
 def build_table(column_list, all_rows, cut_usecase, hline):
-	"""Builds the PrettyTable and prints it to console.
+	"""Builds table and prints it to console.
 
 	"""
 
-	#column list length
+	#column list length(-1)
 	cl_length = len(column_list)-1
 	
 	result_table = prettytable.PrettyTable(column_list)
@@ -394,14 +400,14 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 	all_rows_as_list = []
 
 	for row in all_rows:
-		single_row = list(row)
+		single_row = list(row)			# row is a tuple and contains db query results.
 		
-		for index in range(1, cl_length - 1): # code and index dont need to be filled
+		for index in range(1, cl_length - 1): 	# code and index dont need to be filled
 			if cut_usecase and index == 1:
 				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
 			if not single_row[index]:
 				single_row[index] = ""
-			single_row[index] = fill(single_row[index], width=75/(cl_length+1))
+			single_row[index] = fill(single_row[index], width=75/(cl_length+1))	#TODO: Let user decide size
 
 		#if code is present, print "yes", else "no"	
 		if single_row[cl_length]:
@@ -420,15 +426,13 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 
 def prompt_by_index(results):
 	"""Prompts the user for further commands after displaying content.
-	   Valid input: <index> [attribute] 
+	   Valid input: INDEX [ATTRIBUTE] 
 	"""
 
 	valid_input = False 
-
 	while not valid_input:
-
 		user_input = (raw_input(
-		"Do you want to do further operations on the results? (CTRL-C to abort): ")
+		"Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press CTRL-C to abort: ")
 		.strip().split(None, 1))
 		
 		index = user_input[0]
@@ -441,7 +445,7 @@ def prompt_by_index(results):
 			actual_index = int(index)-1
 			valid_input = True
 			if attribute: 
-				if not attribute in ('use_case', 'command', 'comment', 'DEL'):
+				if not attribute in ('usage', 'execution', 'comment', 'DEL'):
 					print "Wrong attribute, Please try again."
 					valid_input = False
 		else:
@@ -449,22 +453,20 @@ def prompt_by_index(results):
 	return (results[actual_index], attribute) 		
 
 
-def process_follow_up_lookup(original_body, results, database):
+def process_follow_up_operation(original_body, results, database):
 	"""Processes the 2nd operation of the user, e.g. code adding.
 
 	"""
 
 	target, attribute = prompt_by_index(results)
-
-	if '<use_case>' in original_body:
-		original_body['<use_case>'] = target[1]
+	original_body['USAGE'] = target[1]
 	
 	if attribute:
-		original_body['<attribute>'] = attribute
+		original_body['attribute'] = attribute
 		return update_content(original_body, database=database)
 	else:
-		target_code = target[len(target)-1]
-		if not target_code:
-			target_code = " "
-		return process_code_adding(original_body, target_code=target_code, database=database)
+		code_of_target = target[len(target)-1]
+		if not code_of_target:
+			code_of_target = " "
+		return process_code_adding(original_body, code_of_target=code_of_target, database=database)
 

@@ -9,7 +9,7 @@ import sys
 
 
 class Database(object):
-	"""DB.
+	"""DB class, handles all connections with the database.
 
 	""" 
 
@@ -35,7 +35,7 @@ class Database(object):
  
 	def create_table(self):
 		"""Creates tables 'dictionary' and 'languages'.
-	       Returns: True or False
+
 		"""
 
 		try:
@@ -55,8 +55,6 @@ class Database(object):
 			    	CREATE table IF NOT EXISTS Config (id INTEGER PRIMARY KEY, configItem TEXT, value TEXT)
 				''')
 
-			return True
-
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			return False
@@ -64,24 +62,24 @@ class Database(object):
 
 	def delete_content(self, values):
 		"""Changes content of the database.
-		   Returns: True or False
+
 		"""
 
 		try:
 			with self.db_instance:
-				# update database
+				
 				self.db_instance.execute('''
 			    	DELETE from Dictionary WHERE use_case = ? AND languageID = 
 			    	(SELECT id from Languages where language = ?)
-			    ''', (values['<use_case>'], values['<language>']))
+			    ''', (values['USAGE'], values['LANGUAGE']))
 			    
-			return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
+
 
 	def get_editor(self):
-		"""Sets the editor.
+		"""Gets the editor.
 
 		"""
 
@@ -91,11 +89,11 @@ class Database(object):
 				editor = self.db_instance.execute('''
 					SELECT value from Config where configItem = 'editor'
 				''') 
+
 			return editor.fetchone()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
-
+			sys.exit(1)
 
 
 	def set_editor(self, editor):
@@ -114,36 +112,40 @@ class Database(object):
 					UPDATE Config SET value = ? WHERE configItem = 'editor'
 				''', (editor, ))
 
-			return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
-			return False
+			sys.exit(1)
+
 
 	def retrieve_suffix(self, lang_name):
 		"""Retrieves suffix for 1 language from DB
 
 		"""
+
 		try:
 			with self.db_instance:
+
 				suffix = self.db_instance.execute('''
 				SELECT suffix from Languages where language = ?
 				''', (lang_name, ))
-			return suffix.fetchone()[0]
 
+			return suffix.fetchone()[0]
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
+
 
 	def set_suffix(self, lang_name, suffix):
 		"""Inserts suffix for 1 language into the DB.
 
 		"""
+
 		try:
 			with self.db_instance:
 				self.db_instance.execute('''
 				UPDATE Languages SET suffix = ? WHERE language = ?
 				''', (suffix, lang_name, ))
-			return True
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -160,22 +162,22 @@ class Database(object):
 				self.db_instance.execute('''
 					UPDATE Dictionary SET {0} = ? WHERE use_case = ? AND languageID = 
 					(SELECT id from Languages where language = ?)
-					'''.format(values['<attribute>']), 
+					'''.format(values['attribute']), 
 					(values['data'], 
-					values['<use_case>'],
-					values['<language>']))
+					values['USAGE'],
+					values['LANGUAGE']))
 				
 				self.db_instance.execute('''
 						INSERT or IGNORE into Dictionary (id, languageID, use_case, command, comment, code)
 				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
 				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
-				''', (values['<use_case>'],
-					values['<language>'], 
-					values['<language>'], 
-					values['<use_case>'], 
+				''', (values['USAGE'],
+					values['LANGUAGE'], 
+					values['LANGUAGE'], 
+					values['USAGE'], 
 					values['data']))
-				return True
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -192,11 +194,11 @@ class Database(object):
 				self.db_instance.execute('''
 		    	UPDATE Dictionary SET {0} = ? WHERE use_case = ? AND languageID = 
 		    	(SELECT id from Languages where language = ?)
-		    	'''.format(values['<attribute>']), 
+		    	'''.format(values['attribute']), 
 		    	(values['data'], 
-		    	values['<use_case>'],
-		    	values['<language>']))
-				return True
+		    	values['USAGE'],
+		    	values['LANGUAGE']))
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -224,7 +226,7 @@ class Database(object):
 				    		COALESCE((SELECT code from Dictionary where use_case = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)), ''))
 					''', (new_row[0], lang_name, lang_name, new_row[0], new_row[1], new_row[2], new_row[0], lang_name))
-				return True
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -240,7 +242,7 @@ class Database(object):
 			selection_result = selected_rows_to_list(db_selection)
 		else:
 			selection_result = db_selection.fetchone()
-		return selection_result # returns False if no rows were selected			
+		return selection_result 		# returns False if no rows were selected			
 
 
 	def select_from_db(self, location, selection_type):
@@ -251,7 +253,7 @@ class Database(object):
 		
 		if not selection_type in ('language', 'basic', 'code', 'full'):
 			print "DB received no valid selection type."
-			return False
+			sys.exit(1)
 
 		try:
 			with self.db_instance:
@@ -261,7 +263,7 @@ class Database(object):
 					selection = self.db_instance.execute('''
 					    SELECT use_case, command, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-				    ''', (location['<use_case>']+'%', location['<language>']))
+				    ''', (location['USAGE']+'%', location['LANGUAGE']))
 
 
 				elif selection_type == "language":
@@ -269,7 +271,7 @@ class Database(object):
 					selection = self.db_instance.execute('''
 				    	SELECT use_case, command, code FROM Dictionary WHERE languageID = 
 				    	(SELECT id from Languages where language = ?) 
-				    ''', (location['<language>'], ))
+				    ''', (location['LANGUAGE'], ))
 
 
 				elif selection_type == "code":
@@ -277,7 +279,7 @@ class Database(object):
 					selection = self.db_instance.execute('''
 					    SELECT code FROM Dictionary WHERE use_case = ? and languageID = 
 				    	(SELECT id from Languages where language = ?)
-					    ''', (location['<use_case>'], location['<language>']))
+					    ''', (location['USAGE'], location['LANGUAGE']))
 
 
 				elif selection_type == "full":
@@ -285,7 +287,7 @@ class Database(object):
 					selection = self.db_instance.execute('''
 					    SELECT use_case, command, comment, code FROM Dictionary WHERE use_case LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-					''', (location['<use_case>']+'%', location['<language>']))
+					''', (location['USAGE']+'%', location['LANGUAGE']))
 
 				return selection
 
@@ -298,7 +300,6 @@ class Database(object):
 def selected_rows_to_list(all_rows):
 	"""Packs all results from a SELECT statement into a list of tuples which contain
 	   the field values of the rows.
-	   Returns: list of tuples OR False	
 	"""
 
 	result_list = []
@@ -313,7 +314,7 @@ def determine_db_path():
 	"""Determines where the DB is located.
 
 	"""
-	#TODO: fixme
+	#TODO: not ideal ...
 
 	if sys.platform == 'win32':
 		return "data/codedict_db.DB"
