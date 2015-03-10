@@ -158,11 +158,18 @@ class Database(object):
 			with self.db_instance:
 
 				self.db_instance.execute('''
-				INSERT or REPLACE into Dictionary 
-				    	(id, languageID, use_case, code)
+					UPDATE Dictionary SET {0} = ? WHERE use_case = ? AND languageID = 
+					(SELECT id from Languages where language = ?)
+					'''.format(values['<attribute>']), 
+					(values['data'], 
+					values['<use_case>'],
+					values['<language>']))
+				
+				self.db_instance.execute('''
+						INSERT or IGNORE into Dictionary (id, languageID, use_case, command, comment, code)
 				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
-				    		,(SELECT id from Languages where language = ?),?, ?)
+				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
 				''', (values['<use_case>'],
 					values['<language>'], 
 					values['<language>'], 
@@ -210,16 +217,16 @@ class Database(object):
 				for new_row in values:
 					self.db_instance.execute('''
 				    	INSERT or REPLACE into Dictionary 
-				    	(id, languageID, use_case, command, comment)
+				    	(id, languageID, use_case, command, comment, code)
 				    	VALUES((SELECT id from Dictionary where use_case = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
-				    		,(SELECT id from Languages where language = ?), ?, ?, ?)
-					''', (new_row[0],
-						lang_name,
-						lang_name, 
-						 new_row[0],
-						 new_row[1],
-						 new_row[2],))
+				    		,(SELECT id from Languages where language = ?), ?, ?, ?,
+				    		COALESCE((SELECT code from Dictionary where use_case = ? AND languageID = 
+				    		(SELECT id from Languages where language = ?)), '')
+					)
+					''', (new_row[0], lang_name, lang_name, new_row[0] 
+						 new_row[1], new_row[2], new_row[0], lang_name
+						 ))
 				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -312,12 +319,12 @@ def determine_db_path():
 	#TODO: fixme
 
 	if sys.platform == 'win32':
-		return "../data/codedict_db.DB"
+		return "data/codedict_db.DB"
 	elif sys.platform == 'linux2':
-		return "/res/codedict_db.DB"
+		return "res/codedict_db.DB"
 	else:
-		print "Your system is not supported."
-		sys.exit(1) 
+		print "Your system may not be supported as of yet."
+		return "res/codedict_db.DB"
 
 
 

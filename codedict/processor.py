@@ -180,7 +180,7 @@ def code_input_from_editor(suffix, database, existing_code):
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_code:
 			tmpfile.write(initial_message)
-		    tmpfile.flush()
+		    	tmpfile.flush()
 		file_name = tmpfile.name
 
 		if sys.platform == "win32": #windows doing windows things
@@ -204,10 +204,17 @@ def code_input_from_editor(suffix, database, existing_code):
 
 		with open(file_name) as my_file:
 			try:
-				return my_file.read()
+				file_output = my_file.read()
+				myfile.close()
+				os.remove(file_name)
 			except (IOError, OSError) as error:
 				print error
 				sys.exit(1)
+			except:
+				print "An unexpected error has occured."
+				sys.exit(1)
+
+		return file_output
 
 ###CODE ###
 
@@ -337,7 +344,7 @@ def determine_display_operation(body, flags):
 	"""
 
 	cut_usecase = False
-	if '--cut' in flags:
+	if '--cut' in flags and '<use_case>' in body:
 		cut_usecase = body['<use_case>']
 	
 	if '--hline' in flags:
@@ -347,17 +354,20 @@ def determine_display_operation(body, flags):
 
 	database = db.Database()
 
-	if not '<use_case>' in body:
-		results = database.retrieve_content(body, "language")
-		column_list = ["Index", "use case", "command", "code added?"]
-	
-	elif not '-e' in flags:
-
-		results = database.retrieve_content(body, "basic")
-		column_list = ["Index", "use case", "command", "code added?"]			
-	else:
+	if '-e' in flags:
+		if not '<use_case>' in body:
+			body['<use_case>'] = ""
 		results = database.retrieve_content(body, "full")
 		column_list = ["Index", "use case", "command", "comment", "code added?"]
+	
+	elif not '<use_case>' in body:
+
+		results = database.retrieve_content(body, "language")
+		column_list = ["Index", "use case", "command", "code added?"]			
+	
+	else:
+		results = database.retrieve_content(body, "basic")
+		column_list = ["Index", "use case", "command", "code added?"]
 	
 
 	if results:
@@ -447,9 +457,8 @@ def process_follow_up_lookup(original_body, results, database):
 
 	target, attribute = prompt_by_index(results)
 
+	print original_body
 	if '<use_case>' in original_body:
-		original_body['<use_case>'] += target[1]
-	else:
 		original_body['<use_case>'] = target[1]
 	
 	if attribute:

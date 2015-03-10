@@ -32,17 +32,12 @@ Options:
 #relative import
 from docopt import docopt 
 import processor 
-#import from standard library
-import time
 
 if __name__ == '__main__':
 
     COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v 0.4")
 
-    start = time.time()
     try:
         processor.start_process(COMMAND_LINE_ARGS)
     except KeyboardInterrupt:
         print "\nAborted!"
-    finally:
-        print "Program ran for:", time.time() - start
