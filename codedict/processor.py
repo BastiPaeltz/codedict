@@ -180,22 +180,34 @@ def code_input_from_editor(suffix, database, existing_code):
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_code:
 			tmpfile.write(initial_message)
-		        tmpfile.flush()
+		    tmpfile.flush()
 		file_name = tmpfile.name
 
-		try:
-	  		subprocess.Popen(editor_list + [tmpfile.name])
+		if sys.platform == "win32": #windows doing windows things
+			try:
+	  			subprocess.Popen(editor_list + [tmpfile.name])
+	  		except (OSError, IOError) as error:
+	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+	  			sys.exit(1)
 			tmpfile.close()
-	  	except (OSError, IOError) as error:
-	  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
-	  		sys.exit(1)
-		if raw_input("Done?"):
-			with open(file_name) as my_file:
-				try:
-					return my_file.read()
-				except (IOError, OSError) as error:
-					print error
-					sys.exit(1)
+			while True:
+			 	if raw_input("Are you done adding code? (y/n): ") != 'n':
+			 		break
+			 	else:
+			 		continue
+		else:
+			try:
+	  			subprocess.call(editor_list + [tmpfile.name])
+	  		except (OSError, IOError) as error:
+	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+	  			sys.exit(1)
+
+		with open(file_name) as my_file:
+			try:
+				return my_file.read()
+			except (IOError, OSError) as error:
+				print error
+				sys.exit(1)
 
 ###CODE ###
 
@@ -220,12 +232,11 @@ def process_code_adding(body, database=False, target_code=False):
 	suffix = check_for_suffix(body['<language>'], database)
 	body['data'] = code_input_from_editor(suffix, database, existing_code)
 
-	while True:
-		try:
-			body['data'] = unicode(body['data'], 'utf-8')
-			break
-		except UnicodeError as error:
-			print error
+	try:
+		body['data'] = unicode(body['data'], 'utf-8')
+	except UnicodeError as error:
+		print error
+
 	if body['data'] == existing_code:
 		print 'Nothing changed :)'
 		return False
