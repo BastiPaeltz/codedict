@@ -10,7 +10,7 @@ import prettytable
 import tempfile
 import re
 import subprocess
-from textwrap import fill
+import textwrap
 import sys
 import os
 
@@ -25,16 +25,28 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
+	print relevant_args
+
 	if '--editor' in relevant_args:
 		database = db.Database()
-		database.set_editor(unicode(relevant_args['--editor'].strip(), 'utf-8'))
-		print "Setting editor {0} successfull.".format(relevant_args['--editor'])
-	
+		database.set_config_item('editor', unicode(relevant_args['EDITOR'].strip(), 'utf-8'))
+		print "Setting editor {0} successfull.".format(relevant_args['EDITOR'])
+
 	elif '--suffix' in relevant_args:
 		database = db.Database()	
-		database.set_suffix(relevant_args['LANGUAGE'].strip(), unicode(relevant_args['--suffix'], 'utf-8'))
+		database.set_suffix(relevant_args['LANGUAGE'].strip(), unicode(relevant_args['SUFFIX'], 'utf-8'))
 		print "Setting suffix {0} for {1} successfull.".format((
-			relevant_args['--suffix'], relevant_args['LANGUAGE']))
+			relevant_args['SUFFIX'], relevant_args['LANGUAGE']))
+
+	elif '--line-length' in relevant_args:
+		try:
+			int(relevant_args['INTEGER'])
+			database = db.Database()
+			database.set_config_item('console_linelength', unicode(relevant_args['INTEGER'].strip(), 'utf-8'))
+			print "Setting your console line length to {0} successfull.".format(relevant_args['INTEGER'])
+		except ValueError:
+			print "Console line length must be an integer."
+	
 	else:
 		determine_proceeding(relevant_args)
 
@@ -95,7 +107,7 @@ def check_for_editor(database):
 
 	"""
 
-	editor_unicode = database.get_editor()
+	editor_unicode = database.get_config_item('editor')
 
 	if not editor_unicode:
 		valid_input = False
@@ -105,7 +117,7 @@ def check_for_editor(database):
 				valid_input = True
 			except UnicodeError as error:
 				print error
-		database.set_editor(editor_value)
+		database.set_editor('editor', editor_value)
 		editor_value = editor_value.encode('utf-8')
 	else:
 		editor_value = editor_unicode[0].encode('utf-8')
@@ -378,14 +390,20 @@ def determine_display_operation(body, flags):
 		column_list = ["Index", "usage", "execution", "code added?"]
 	
 	if results:
-		updated_results, table = build_table(column_list, results, cut_usecase, hline)
+		console_linelength = database.get_config_item('console_linelength')
+		if not console_linelength:
+			console_linelength = 80
+		else:
+			console_linelength = int(console_linelength[0])
+
+		updated_results, table = build_table(column_list, results, cut_usecase, hline, console_linelength)
 		process_printing(table, results, database)
 		process_follow_up_operation(body, updated_results, database)
 	else:
 		print "No results."
 		
 
-def build_table(column_list, all_rows, cut_usecase, hline):
+def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 	"""Builds table and prints it to console.
 
 	"""
@@ -401,13 +419,15 @@ def build_table(column_list, all_rows, cut_usecase, hline):
 
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
-		
-		for index in range(1, cl_length - 1): 	# code and index dont need to be filled
+		print line_length/(cl_length+1)
+		for index in range(1, cl_length): 	# code and index dont need to be filled
 			if cut_usecase and index == 1:
 				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
 			if not single_row[index]:
 				single_row[index] = ""
-			single_row[index] = fill(single_row[index], width=75/(cl_length+1))	#TODO: Let user decide size
+
+			dedented_item = textwrap.dedent(single_row[index]).strip()
+			single_row[index] = textwrap.fill(dedented_item, width=line_length/(cl_length+1))	
 
 		#if code is present, print "yes", else "no"	
 		if single_row[cl_length]:
@@ -432,9 +452,11 @@ def prompt_by_index(results):
 	valid_input = False 
 	while not valid_input:
 		user_input = (raw_input(
-		"Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press CTRL-C to abort: ")
+		"Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n")
 		.strip().split(None, 1))
 		
+		if not user_input:
+			sys.exit(0)
 		index = user_input[0]
 		try:
 			attribute = user_input[1]
@@ -445,9 +467,12 @@ def prompt_by_index(results):
 			actual_index = int(index)-1
 			valid_input = True
 			if attribute: 
-				if not attribute in ('usage', 'execution', 'comment', 'DEL'):
+				if not attribute in ('usage', 'execution', 'comment', 'code', 'DEL'):
 					print "Wrong attribute, Please try again."
 					valid_input = False
+				else:
+					if attribute == 'code':
+						attribute = ""
 		else:
 			print "Wrong index, Please try again."
 	return (results[actual_index], attribute) 		

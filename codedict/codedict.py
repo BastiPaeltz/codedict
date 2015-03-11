@@ -9,6 +9,7 @@ Usage:
   codedict -c LANGUAGE USAGE
   codedict --editor EDITOR
   codedict LANGUAGE --suffix SUFFIX
+  codedict --line-length INTEGER
   codedict --version  
   codedict (-h | --help)
 
@@ -21,14 +22,16 @@ Options:
   
   -e          Displays every value.
 
-  --editor    Sets your editor to the specified value. This has to be an executable.
-  --suffix    Sets the specified suffix for the language. This is convenient for
-              syntax highlighting inside editors.  
-  --cut       Cutting search phrase from the output's usage. 
-  --hline     Prints a horizontal line between each row of the output table. 
+  --editor      Sets your editor to the specified value. This has to be an executable.
+  --line-length Sets the line length. The output table gets formated based on this value. 
+                Should match your console's line length.
+  --suffix      Sets the specified suffix for the language. This is convenient for
+                syntax highlighting inside editors.  
+  --cut         Cutting search phrase from the output's usage. 
+  --hline       Prints a horizontal line between each row of the output table. 
 
-  --help      Show this screen.  
-  --version   Show version.
+  --help        Show this screen.  
+  --version     Show version.
 
 """
 

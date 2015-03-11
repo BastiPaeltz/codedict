@@ -54,7 +54,7 @@ class Database(object):
 				self.db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Config (id INTEGER PRIMARY KEY, configItem TEXT, value TEXT)
 				''')
-
+				return True
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			return False
@@ -78,25 +78,24 @@ class Database(object):
 			sys.exit(1)
 
 
-	def get_editor(self):
-		"""Gets the editor.
+	def get_config_item(self, config_item):
+		"""Gets a config item (editor or line-length).
 
 		"""
 
 		try:
 			with self.db_instance:
+				value = self.db_instance.execute('''
+					SELECT value from Config where configItem = ?
+				''', (config_item, ))
 
-				editor = self.db_instance.execute('''
-					SELECT value from Config where configItem = 'editor'
-				''') 
-
-			return editor.fetchone()
+			return value.fetchone()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
 
 
-	def set_editor(self, editor):
+	def set_config_item(self, config_item, value):
 		"""Sets the editor.
 
 		"""
@@ -105,12 +104,12 @@ class Database(object):
 			with self.db_instance:
 
 				self.db_instance.execute('''
-					INSERT or IGNORE INTO Config (configItem, value) VALUES ('editor', ?)
-				''', (editor, ))
+					INSERT or IGNORE INTO Config (configItem, value) VALUES (?, ?)
+				''', (config_item, value))
 
 				self.db_instance.execute('''
-					UPDATE Config SET value = ? WHERE configItem = 'editor'
-				''', (editor, ))
+					UPDATE Config SET value = ? WHERE configItem = ?
+				''', (value, config_item))
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -323,7 +322,6 @@ def determine_db_path():
 	else:
 		print "Your system may not be supported as of yet."
 		return "res/codedict_db.DB"
-
 
 
 def establish_db_connection(db_path):
