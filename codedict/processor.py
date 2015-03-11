@@ -25,8 +25,6 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
-	print relevant_args
-
 	if '--editor' in relevant_args:
 		database = db.Database()
 		database.set_config_item('editor', unicode(relevant_args['EDITOR'].strip(), 'utf-8'))
@@ -80,7 +78,7 @@ def determine_proceeding(relevant_args):
 	elif '-a' in flags:
 		process_add_content(body, flags)
 	elif '-c' in flags:
-		process_code_adding(body, database)
+		process_code_adding(body)
 	else:
 		print "An unexpected error has occured while processing {0} with flags {1}".format(body, flags)
 
@@ -117,7 +115,7 @@ def check_for_editor(database):
 				valid_input = True
 			except UnicodeError as error:
 				print error
-		database.set_editor('editor', editor_value)
+		database.set_config_item('editor', editor_value)
 		editor_value = editor_value.encode('utf-8')
 	else:
 		editor_value = editor_unicode[0].encode('utf-8')
@@ -135,42 +133,53 @@ def print_to_editor(table, database):
 	editor_list = [argument for argument in editor_value.split(" ")]
 
 	prewritten_data = table.get_string() # prettytable to string
+	print prewritten_data.splitlines()[0]
 
-	with tempfile.TemporaryFile() as tmpfile:
-		tmpfile.write(prewritten_data)
-		tmpfile.flush()
+	with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+
 		try:
-	  		subprocess.Popen(editor_list + [tmpfile.name])
-	  	except (OSError, IOError) as error:
-	  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
-	  		sys.exit(1)
+			tmpfile.write(prewritten_data)
+			tmpfile.flush()
+			try:
+		  		subprocess.Popen(editor_list + [tmpfile.name])
+		  	except (OSError, IOError) as error:
+		  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+		  		sys.exit(1)
+
+		except (OSError, IOError) as error:
+			print error
+			sys.exit(1)
+	return tmpfile
 
 
-def process_printing(table, results, database):
+def process_printing(table, database):
 	"""Processes all priting to console or editor.
 
 	"""
-	decision = decide_where_to_print(results)
+	decision = decide_where_to_print(table)
 	if decision == 'console':
 		print table
+		return False
 	else:
-		print_to_editor(table, database) 
+		return print_to_editor(table, database) 
 
 
-def decide_where_to_print(results):
+def decide_where_to_print(table):	
 	"""Decides where to print to.
 
 	"""
-	#TODO: Let user decide
-	if len(results) < 10:
+
+	if len(table.get_string().splitlines()) < 25:
 		return 'console'
 	else:
 		valid_input = False
 		while not valid_input:
-			choice = raw_input("More than 10 results - print to console anyway? (y/n)").strip().split(" ")[0]
+			choice = raw_input("Output longer than 25 lines - print to console anyway? (y/n) ").strip().split(" ")[0]
 			if choice in ('y', 'yes', 'Yes', 'Y'):
+				valid_input = True
 				return "console"
 			elif choice in ('n', 'no', 'No', 'N'):
+				valid_input = True
 				return "editor"
 			else:
 				continue
@@ -191,7 +200,7 @@ def code_input_from_editor(suffix, database, existing_code):
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_code:
 			tmpfile.write(prewritten_data)
-		    	tmpfile.flush()
+			tmpfile.seek(0)
 		file_name = tmpfile.name
 
 		if sys.platform == "win32": # windows doing windows things
@@ -280,13 +289,14 @@ def process_file_adding(body):
 	try:
 		with open(body['PATH-TO-FILE']) as input_file:
 			file_text = input_file.read()
+			input_file.close()
 	except (OSError, IOError) as error:
 		print "File Error({0}): {1}".format(error.errno, error.strerror)
 		sys.exit(1)
 
 	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
 		file_text, re.UNICODE))
-	
+
 	database = db.Database()
  	database.add_content(all_matches, body['LANGUAGE'])
  	print "Finished - updated your codedict successfully."
@@ -389,6 +399,7 @@ def determine_display_operation(body, flags):
 		results = database.retrieve_content(body, "basic")
 		column_list = ["Index", "usage", "execution", "code added?"]
 	
+
 	if results:
 		console_linelength = database.get_config_item('console_linelength')
 		if not console_linelength:
@@ -397,8 +408,10 @@ def determine_display_operation(body, flags):
 			console_linelength = int(console_linelength[0])
 
 		updated_results, table = build_table(column_list, results, cut_usecase, hline, console_linelength)
-		process_printing(table, results, database)
-		process_follow_up_operation(body, updated_results, database)
+		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
+	
+		process_follow_up_operation(body, updated_results, database, tmpfile)
+
 	else:
 		print "No results."
 		
@@ -419,7 +432,6 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
-		print line_length/(cl_length+1)
 		for index in range(1, cl_length): 	# code and index dont need to be filled
 			if cut_usecase and index == 1:
 				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
@@ -444,7 +456,7 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 
 ###SECOND ###
 
-def prompt_by_index(results):
+def prompt_by_index(results, tmpfile=False):
 	"""Prompts the user for further commands after displaying content.
 	   Valid input: INDEX [ATTRIBUTE] 
 	"""
@@ -455,19 +467,31 @@ def prompt_by_index(results):
 		"Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n")
 		.strip().split(None, 1))
 		
+		if tmpfile:
+			try:
+				os.remove(tmpfile.name)
+				tmpfile = False
+			except OSError as error:
+				print error 
+				print "This error is not crucial for the program itself."
+
+
 		if not user_input:
+			# aborted
 			sys.exit(0)
 		index = user_input[0]
 		try:
-			attribute = user_input[1]
+			attribute = user_input[1].lower()
 		except IndexError:
 			attribute = ""
+
+		print attribute
 
 		if len(user_input) <= 2 and index.isdigit() and int(index) >= 1 and int(index) <= len(results):	
 			actual_index = int(index)-1
 			valid_input = True
 			if attribute: 
-				if not attribute in ('usage', 'execution', 'comment', 'code', 'DEL'):
+				if not attribute in ('usage', 'execution', 'comment', 'code', 'del'):
 					print "Wrong attribute, Please try again."
 					valid_input = False
 				else:
@@ -478,12 +502,12 @@ def prompt_by_index(results):
 	return (results[actual_index], attribute) 		
 
 
-def process_follow_up_operation(original_body, results, database):
+def process_follow_up_operation(original_body, results, database, tmpfile):
 	"""Processes the 2nd operation of the user, e.g. code adding.
 
 	"""
 
-	target, attribute = prompt_by_index(results)
+	target, attribute = prompt_by_index(results, tmpfile)
 	original_body['USAGE'] = target[1]
 	
 	if attribute:
