@@ -6,7 +6,7 @@
 #import from standard library
 import sqlite3
 import sys
-
+import os
 
 class Database(object):
 	"""DB class, handles all connections with the database.
@@ -15,6 +15,7 @@ class Database(object):
 
 	def __init__(self):
 		self.db_path = determine_db_path()
+		print self.db_path
 		self._db_instance = establish_db_connection(self.db_path)
 		self._setup_database()
 
@@ -317,10 +318,11 @@ def determine_db_path():
 	"""
 	#TODO: not ideal ...
 
+	print os.path.dirname(__file__)
 	if sys.platform == 'win32':
 		return "data/codedict_db.DB"
 	elif sys.platform == 'linux2':
-		return "res/codedict_db.DB"
+		return os.path.dirname(__file__)+'/res/codedict_db.DB'
 	else:
 		print "Your system may not be supported as of yet."
 		return "res/codedict_db.DB"

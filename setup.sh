@@ -2,6 +2,7 @@
 
 Install () {
 	
+	# $1 INSTALLTYPE $2 INSTALLDIR $3 EXEDIR
 	if [ $1 = '1' ]; then
 		LOCATION="default_installation/"
 	else
@@ -15,23 +16,42 @@ Install () {
 		echo "Checksums OK."
 		cd ..
 
-		cp -rv ${LOCATION} ${2}
+		if [ -e ]
 
-		if [ "$2" = "*/" ]; then
-			ABSOLUTE_PATH="$(pwd)/"$2"/"$LOCATION"codedict_run"
+		if [ -e $(pwd)$LOCATION ]; then
+			cp -rv ${LOCATION} ${2}
 		else
-			ABSOLUTE_PATH="$(pwd)/"$2""$LOCATION"codedict_run"
+			exit 1
 		fi
 
-		echo $ABSOLUTE_PATH
+		if [ "$2" = "*/" ]; then
+			if [ ! "$2" = "/*" ]; then
+				# relative location, ending-'/' trailed
+				ABSOLUTE_PATH="$(pwd)/"$2"/"$LOCATION"codedict"
+			else
+				ABSOLUTE_PATH=""$2""$LOCATION"codedict"
+			fi
+		else
+			if [ ! "$2" = "/*" ]; then
+				# relative location, no ending '/'
+				ABSOLUTE_PATH="$(pwd)/"$2""$LOCATION"codedict"
+			else
+				ABSOLUTE_PATH=""$2"/"$LOCATION"codedict"
+			fi
+		fi
+
+		chown "$(logname)" ${ABSOLUTE_PATH%"codedict"}
+		chmod 755 $ABSOLUTE_PATH
+		chmod 755 ${ABSOLUTE_PATH%"codedict"}
+
 
 		EXECTEXT='#!/bin/sh \n \n'$ABSOLUTE_PATH' $@'
 
 		if [ "$3" = "*/" ]; then 
-			echo "$EXECTEXT" > ${3}"codedict" 
+			sudo echo "$EXECTEXT" > ${3}"codedict" 
 			chmod +x ${3}"codedict"
 		else
-			echo "$EXECTEXT" > ${3}"/codedict"
+			sudo echo "$EXECTEXT" > ${3}"/codedict"
 			chmod +x ${3}"/codedict"
 		fi
 
@@ -60,7 +80,7 @@ Installation types:\n\
 		exit
 	else
 		if [ ! $INSTALLDIR ]; then
-			INSTALLDIR=$(pwd)
+			INSTALLDIR="./"
 		fi
 
 		if [ ! $EXECUTABLEDIR ]; then
