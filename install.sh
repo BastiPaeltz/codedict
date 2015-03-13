@@ -4,7 +4,7 @@ Install () {
 	
 	# $1 INSTALLTYPE $2 INSTALLDIR $3 EXEDIR
 	if [ $1 = '1' ]; then
-		LOCATION="default_installation/"
+		LOCATION="general_installation/"
 	else
 		LOCATION="python_installation/"
 	fi
@@ -46,9 +46,7 @@ Install () {
 }
 
 
-
-
-if [ -e python_installation/checksum.txt ]; then
+if [ -e python_installation/codedict -o -e general_installation/codedict ]; then
 
 	INSTALLTYPE=$1
 	INSTALLDIR=$2
@@ -58,8 +56,11 @@ if [ -e python_installation/checksum.txt ]; then
 		echo "\
 Please enter a correct installation type.\n\
 Installation types:\n\
-1: Default installation - upside: Nothing required - downside: executable is compiled.\n\
-2: Python installation - upside: source code is readable. downside: Python 2.7 Interpreter required."
+1: General installation - upside: No Interpreter required - downside: executable is compiled.\n\
+2: Python installation - upside: source code is readable. downside: Python 2.7 Interpreter required.\n\
+If you are uncertain if the compiled file is malicious test it with antivirus software \n\
+or try to get reviews from people who already tried it. \n\
+Do your research - you shouldn't trust me blindly."
 		exit
 	else
 		if [ ! $INSTALLDIR ]; then
@@ -81,7 +82,7 @@ Installation types:\n\
 		esac
 
 		if [ $INSTALLTYPE = '1' ]; then
-			INSTALLTEXT="Default"
+			INSTALLTEXT="General"
 		else
 			INSTALLTEXT="Python"
 		fi

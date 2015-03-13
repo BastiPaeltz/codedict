@@ -15,6 +15,7 @@ class Database(object):
 
 	def __init__(self):
 		self.db_path = determine_db_path()
+		print self.db_path
 		self._db_instance = establish_db_connection(self.db_path)
 		self._setup_database()
 
@@ -315,18 +316,16 @@ def determine_db_path():
 	"""Determines where the DB is located.
 
 	"""
+	#TODO: not ideal ...
 
-	if getattr(sys, 'frozen', False):
-	       # The application is frozen
-	    datadir = os.path.dirname(sys.executable)
-	    print datadir
+	print os.path.dirname(__file__)
+	if sys.platform == 'win32':
+		return "data/codedict_db.DB"
+	elif sys.platform == 'linux2':
+		return os.path.dirname(__file__)+'/res/codedict_db.DB'
 	else:
-	    # The application is not frozen
-	    datadir = os.path.dirname(__file__)
-
-	return datadir+'/res/codedict_db.DB'
-
-	
+		print "Your system may not be supported as of yet."
+		return "res/codedict_db.DB"
 
 
 def establish_db_connection(db_path):
