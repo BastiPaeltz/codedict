@@ -15,43 +15,43 @@ class Database(object):
 
 	def __init__(self):
 		self.db_path = determine_db_path()
-		self.db_instance = establish_db_connection(self.db_path)
-		self.setup_database()
+		self._db_instance = establish_db_connection(self.db_path)
+		self._setup_database()
 
 
-	def setup_database(self):
+	def _setup_database(self):
 		"""Sets up the database for usage.
 
 		"""
 		
-		if not self.db_instance:
+		if not self._db_instance:
 			print "Error while reaching DB."
 			sys.exit(1) 
 		
-		if not self.create_table():
+		if not self._create_table():
 			print "Error while creating DB tables."
 			sys.exit(1)
 
  
-	def create_table(self):
+	def _create_table(self):
 		"""Creates tables 'dictionary' and 'languages'.
 
 		"""
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 				# create tables
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
 			    		language TEXT, suffix TEXT)
 				''')
 
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Dictionary (id INTEGER PRIMARY KEY, languageID INTEGER, 
 			    		usage TEXT, execution TEXT, comment TEXT, code TEXT)
 				''')
 
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Config (id INTEGER PRIMARY KEY, configItem TEXT, value TEXT)
 				''')
 				return True
@@ -66,9 +66,9 @@ class Database(object):
 		"""
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 				
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 			    	DELETE from Dictionary WHERE usage = ? AND languageID = 
 			    	(SELECT id from Languages where language = ?)
 			    ''', (values['USAGE'], values['LANGUAGE']))
@@ -84,8 +84,8 @@ class Database(object):
 		"""
 
 		try:
-			with self.db_instance:
-				value = self.db_instance.execute('''
+			with self._db_instance:
+				value = self._db_instance.execute('''
 					SELECT value from Config where configItem = ?
 				''', (config_item, ))
 
@@ -101,13 +101,13 @@ class Database(object):
 		"""
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 					INSERT or IGNORE INTO Config (configItem, value) VALUES (?, ?)
 				''', (config_item, value))
 
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 					UPDATE Config SET value = ? WHERE configItem = ?
 				''', (value, config_item))
 
@@ -122,9 +122,9 @@ class Database(object):
 		"""
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 
-				suffix = self.db_instance.execute('''
+				suffix = self._db_instance.execute('''
 				SELECT suffix from Languages where language = ?
 				''', (lang_name, ))
 
@@ -140,8 +140,8 @@ class Database(object):
 		"""
  
 		try:
-			with self.db_instance:
-				self.db_instance.execute('''
+			with self._db_instance:
+				self._db_instance.execute('''
 				UPDATE Languages SET suffix = ? WHERE language = ?
 				''', (suffix, lang_name, ))
 
@@ -156,9 +156,9 @@ class Database(object):
 		"""
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 					UPDATE Dictionary SET {0} = ? WHERE usage = ? AND languageID = 
 					(SELECT id from Languages where language = ?)
 					'''.format(values['attribute']), 
@@ -166,7 +166,7 @@ class Database(object):
 					values['USAGE'],
 					values['LANGUAGE']))
 				
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 						INSERT or IGNORE into Dictionary (id, languageID, usage, execution, comment, code)
 				    	VALUES((SELECT id from Dictionary where usage = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
@@ -188,9 +188,9 @@ class Database(object):
 		"""	
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 				# update database
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 		    	UPDATE Dictionary SET {0} = ? WHERE usage = ? AND languageID = 
 		    	(SELECT id from Languages where language = ?)
 		    	'''.format(values['attribute']), 
@@ -209,15 +209,15 @@ class Database(object):
 		"""
 		
 		try:
-			with self.db_instance:
+			with self._db_instance:
 				
 				#add language to lang db if not exists
-				self.db_instance.execute('''
+				self._db_instance.execute('''
 				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
 				''', (lang_name, ))
 				
 				for new_row in values:
-					self.db_instance.execute('''
+					self._db_instance.execute('''
 				    	INSERT or REPLACE into Dictionary 
 				    	(id, languageID, usage, execution, comment, code)
 				    	VALUES((SELECT id from Dictionary where usage = ? AND languageID = 
@@ -238,7 +238,7 @@ class Database(object):
 		   Returns: List of tuples OR False
 		"""
 		
-		db_selection = self.select_from_db(location, selection_type)
+		db_selection = self._select_from_db(location, selection_type)
 		if not selection_type == "code":	
 			selection_result = selected_rows_to_list(db_selection)
 		else:
@@ -246,7 +246,7 @@ class Database(object):
 		return selection_result 		# returns False if no rows were selected			
 
 
-	def select_from_db(self, location, selection_type):
+	def _select_from_db(self, location, selection_type):
 		"""Selects from DB.
 		   Returns: DB cursor Object or False
 
@@ -257,11 +257,11 @@ class Database(object):
 			sys.exit(1)
 
 		try:
-			with self.db_instance:
+			with self._db_instance:
 			
 				if selection_type == "basic":
 			
-					selection = self.db_instance.execute('''
+					selection = self._db_instance.execute('''
 					    SELECT usage, execution, code FROM Dictionary WHERE usage LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
 				    ''', (location['USAGE']+'%', location['LANGUAGE']))
@@ -269,7 +269,7 @@ class Database(object):
 
 				elif selection_type == "language":
 
-					selection = self.db_instance.execute('''
+					selection = self._db_instance.execute('''
 				    	SELECT usage, execution, code FROM Dictionary WHERE languageID = 
 				    	(SELECT id from Languages where language = ?) 
 				    ''', (location['LANGUAGE'], ))
@@ -277,7 +277,7 @@ class Database(object):
 
 				elif selection_type == "code":
 
-					selection = self.db_instance.execute('''
+					selection = self._db_instance.execute('''
 					    SELECT code FROM Dictionary WHERE usage = ? and languageID = 
 				    	(SELECT id from Languages where language = ?)
 					    ''', (location['USAGE'], location['LANGUAGE']))
@@ -285,7 +285,7 @@ class Database(object):
 
 				elif selection_type == "full":
 
-					selection = self.db_instance.execute('''
+					selection = self._db_instance.execute('''
 					    SELECT usage, execution, comment, code FROM Dictionary WHERE usage LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
 					''', (location['USAGE']+'%', location['LANGUAGE']))
