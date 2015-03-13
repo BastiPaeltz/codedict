@@ -10,51 +10,34 @@ Install () {
 	fi
 
 	cd ${LOCATION}
+	echo $3
 
 	if [ ! $(md5sum -c checksum.txt --quiet) ]; then
 		# installation begins here
 		echo "Checksums OK."
 		cd ..
 
-		if [ -e ]
-
-		if [ -e $(pwd)$LOCATION ]; then
-			cp -rv ${LOCATION} ${2}
+		if [ -e "${2}/res" ]; then
+			cp -pv ${LOCATION}* ${2}
 		else
-			exit 1
+			cp -rpv ${LOCATION}* ${2}
 		fi
 
-		if [ "$2" = "*/" ]; then
-			if [ ! "$2" = "/*" ]; then
-				# relative location, ending-'/' trailed
-				ABSOLUTE_PATH="$(pwd)/"$2"/"$LOCATION"codedict"
-			else
-				ABSOLUTE_PATH=""$2""$LOCATION"codedict"
-			fi
-		else
-			if [ ! "$2" = "/*" ]; then
-				# relative location, no ending '/'
-				ABSOLUTE_PATH="$(pwd)/"$2""$LOCATION"codedict"
-			else
-				ABSOLUTE_PATH=""$2"/"$LOCATION"codedict"
-			fi
-		fi
-
-		chown "$(logname)" ${ABSOLUTE_PATH%"codedict"}
-		chmod 755 $ABSOLUTE_PATH
-		chmod 755 ${ABSOLUTE_PATH%"codedict"}
+		case "$2" in
+		    /*) ABSOLUTE_PATH=""$2"codedict";;
+		    *) ABSOLUTE_PATH="$(pwd)/"$2"codedict";;
+		esac
 
 
 		EXECTEXT='#!/bin/sh \n \n'$ABSOLUTE_PATH' $@'
 
-		if [ "$3" = "*/" ]; then 
-			sudo echo "$EXECTEXT" > ${3}"codedict" 
-			chmod +x ${3}"codedict"
-		else
-			sudo echo "$EXECTEXT" > ${3}"/codedict"
-			chmod +x ${3}"/codedict"
-		fi
+		case "$3" in
+		    */) ABSOLUTE_PATH=""$2"codedict";;
+		    *) ABSOLUTE_PATH="$(pwd)/"$2"codedict";;
+		esac
 
+		echo "$EXECTEXT" > ${3}"codedict"
+		chmod +x ${3}"codedict"
 
 	else
 		echo "Installation error - checksums didn't match."
@@ -84,8 +67,18 @@ Installation types:\n\
 		fi
 
 		if [ ! $EXECUTABLEDIR ]; then
-			EXECUTABLEDIR="/usr/local/bin/"
+			EXECUTABLEDIR="/usr/local/bin/"			
 		fi
+
+		case "$INSTALLDIR" in
+		    */) INSTALLDIR=$INSTALLDIR;;
+		    *) INSTALLDIR=$INSTALLDIR"/";;
+		esac
+
+		case "$EXECUTABLEDIR" in
+		    */) EXECUTABLEDIR=$EXECUTABLEDIR;;
+		    *) EXECUTABLEDIR=$EXECUTABLEDIR"/";;
+		esac
 
 		if [ $INSTALLTYPE = '1' ]; then
 			INSTALLTEXT="Default"
@@ -99,7 +92,7 @@ All files will be placed into "$INSTALLDIR"\n\
 The actual executable (that you will run from the command line) will be placed into "$EXECUTABLEDIR""
 		
 		while true; do
-		    read -p "Do you wish to install this program? " yn
+		    read -p "Do you wish to install this program? (y/n) " yn
 		    case $yn in
 		        [Yy]* ) Install $INSTALLTYPE $INSTALLDIR $EXECUTABLEDIR; break;;
 		        [Nn]* ) exit;;
