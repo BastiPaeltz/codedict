@@ -95,9 +95,7 @@ class Database(object):
 				self._db_instance.execute('''
 					UPDATE Config SET value = ? WHERE configItem = ?
 				''', (value, config_item, ))
-
-			print "Setting {0} to {1} successfull.".format(config_item, value)
-
+			
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
