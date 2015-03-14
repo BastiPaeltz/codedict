@@ -1,0 +1,3 @@
+#!/bin/sh 
+ 
+/home/sebastian/proggen/coding-encyclopedia/py3/codedict $@

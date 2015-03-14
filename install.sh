@@ -10,9 +10,8 @@ Install () {
 	fi
 
 	cd ${LOCATION}
-	echo $3
 
-	if [ ! $(md5sum -c checksum.txt --quiet) ]; then
+	if [ ! $(md5sum -c checksum.txt | grep md5sum) ]; then
 		# installation begins here
 		echo "Checksums OK."
 		cd ..
@@ -46,7 +45,7 @@ Install () {
 }
 
 
-if [ -e python_installation/codedict -o -e general_installation/codedict ]; then
+if [ -e src_installation/ -a -e frozen_installation/ ]; then
 
 	INSTALLTYPE=$1
 	INSTALLDIR=$2
@@ -56,12 +55,13 @@ if [ -e python_installation/codedict -o -e general_installation/codedict ]; then
 		echo "\
 Please enter a correct installation type.\n\
 Installation types:\n\
-1: General installation - upside: No Interpreter required - downside: executable is compiled.\n\
-2: Python installation - upside: source code is readable. downside: Python 2.7 Interpreter required.\n\
+1: Frozen installation - upside: No interpreter required. - downside: executable is compiled.\n\
+2: Source installation - upside: source code is readable. - downside: Python 2.7 interpreter required.\n\
 If you are uncertain if the compiled file is malicious test it with antivirus software \n\
-or try to get reviews from people who already tried it. \n\
+or try to get reviews from people who already used it. \n\
 Do your research - you shouldn't trust me blindly."
 		exit
+
 	else
 		if [ ! $INSTALLDIR ]; then
 			INSTALLDIR="./"
@@ -82,15 +82,15 @@ Do your research - you shouldn't trust me blindly."
 		esac
 
 		if [ $INSTALLTYPE = '1' ]; then
-			INSTALLTEXT="General"
+			INSTALLTEXT="frozen"
 		else
-			INSTALLTEXT="Python"
+			INSTALLTEXT="source"
 		fi
 
 		echo "\
-You selected "$INSTALLTEXT" installation\n\
-All files will be placed into "$INSTALLDIR"\n\
-The actual executable (that you will run from the command line) will be placed into "$EXECUTABLEDIR""
+You selected "$INSTALLTEXT" installation.\n\
+All files will be placed into "$INSTALLDIR".\n\
+The actual executable will be placed into "$EXECUTABLEDIR"."
 		
 		while true; do
 		    read -p "Do you wish to install this program? (y/n) " yn
@@ -103,6 +103,6 @@ The actual executable (that you will run from the command line) will be placed i
 	fi
 else
 	echo "Installation error - missing files."
-	exit 1
+	exit 
 fi
 

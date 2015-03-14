@@ -1,6 +1,3 @@
 *.pyc
 *.DB
-*.cfg
-./codedict.egg-info
 *.txt
-./py3

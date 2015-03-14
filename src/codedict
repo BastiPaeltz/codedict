@@ -11,6 +11,7 @@ Usage:
   codedict -a 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
+  codedict --wait (off | on)
   codedict --line INTEGER
 
 Options:
@@ -29,6 +30,7 @@ Options:
                 This is convenient for syntax highlighting inside editors.  
   --cut         Cutting search phrase from the output's 'problem' field. 
   --hline       Prints a horizontal line between each row of the output table. 
+  --wait        Enabling this option This is needed on certain editors.  
 
   --help        Show this screen.  
   --version     Show version.
