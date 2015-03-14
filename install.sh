@@ -18,9 +18,9 @@ Install () {
 		cd ..
 
 		if [ -e "${2}/res" ]; then
-			cp -pv ${LOCATION}* ${2}
+			cp -pvi ${LOCATION}* ${2}
 		else
-			cp -rpv ${LOCATION}* ${2}
+			cp -rpvi ${LOCATION}* ${2}
 		fi
 
 		case "$2" in
