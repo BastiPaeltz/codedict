@@ -1,4 +1,4 @@
-"""Defines the data processing / handling using local sqlite3 database
+"""Defines the data processing / handling using local sqlite3 database.
 
  
 """
@@ -7,6 +7,8 @@
 import sqlite3
 import sys
 import os
+
+
 
 class Database(object):
 	"""DB class, handles all connections with the database.
@@ -20,8 +22,8 @@ class Database(object):
 
 
 	def _setup_database(self):
-		"""Sets up the database for usage.
-
+		"""Sets up the database for usage. Exits if connecting to DB or setting up
+		tables fails.
 		"""
 		
 		if not self._db_instance:
@@ -34,7 +36,7 @@ class Database(object):
 
  
 	def _create_table(self):
-		"""Creates tables 'dictionary' and 'languages'.
+		"""Creates tables 'dictionary', 'languages' and 'config' if they not exist.
 
 		"""
 
@@ -48,7 +50,7 @@ class Database(object):
 
 				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Dictionary (id INTEGER PRIMARY KEY, languageID INTEGER, 
-			    		usage TEXT, execution TEXT, comment TEXT, code TEXT)
+			    		problem TEXT, solution TEXT, comment TEXT, code TEXT)
 				''')
 
 				self._db_instance.execute('''
@@ -61,17 +63,17 @@ class Database(object):
 
 
 	def delete_content(self, values):
-		"""Changes content of the database.
-
+		"""Deletes content from the Dictionary table, language and problem field 
+		have to match the rows values.
 		"""
 
 		try:
 			with self._db_instance:
 				
 				self._db_instance.execute('''
-			    	DELETE from Dictionary WHERE usage = ? AND languageID = 
+			    	DELETE from Dictionary WHERE problem = ? AND languageID = 
 			    	(SELECT id from Languages where language = ?)
-			    ''', (values['USAGE'], values['LANGUAGE']))
+			    ''', (values['problem'], values['LANGUAGE']))
 			    
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -79,7 +81,7 @@ class Database(object):
 
 
 	def get_config_item(self, config_item):
-		"""Gets a config item (editor or line-length).
+		"""Gets a config item (editor or line-length) from the Config table.
 
 		"""
 
@@ -96,7 +98,7 @@ class Database(object):
 
 
 	def set_config_item(self, config_item, value):
-		"""Sets the editor.
+		"""Sets the editor row in the Config table of the DB.
 
 		"""
 
@@ -117,7 +119,7 @@ class Database(object):
 
 
 	def retrieve_suffix(self, lang_name):
-		"""Retrieves suffix for 1 language from DB
+		"""Retrieves suffix for 1 language from Language table of the DB. 
 
 		"""
 
@@ -151,30 +153,29 @@ class Database(object):
 
 
 	def upsert_code(self, values):
-		"""Changes content of the dictionary.
-		   Returns: True or False
+		"""Upserts (insert or update if exists) code into the DB. 
 		"""
 
 		try:
 			with self._db_instance:
 
 				self._db_instance.execute('''
-					UPDATE Dictionary SET {0} = ? WHERE usage = ? AND languageID = 
+					UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
 					(SELECT id from Languages where language = ?)
 					'''.format(values['attribute']), 
 					(values['data'], 
-					values['USAGE'],
+					values['problem'],
 					values['LANGUAGE']))
 				
 				self._db_instance.execute('''
-						INSERT or IGNORE into Dictionary (id, languageID, usage, execution, comment, code)
-				    	VALUES((SELECT id from Dictionary where usage = ? AND languageID = 
+						INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
+				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)) 
 				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
-				''', (values['USAGE'],
+				''', (values['problem'],
 					values['LANGUAGE'], 
 					values['LANGUAGE'], 
-					values['USAGE'], 
+					values['problem'], 
 					values['data']))
 
 		except sqlite3.Error as error:
@@ -183,19 +184,18 @@ class Database(object):
 		
 
 	def update_content(self, values):
-		"""Changes content of the dictionary.
-		   Returns: True or False
+		"""Updates content of the DB, not insert! Only for values whcih already exist.
 		"""	
 
 		try:
 			with self._db_instance:
 				# update database
 				self._db_instance.execute('''
-		    	UPDATE Dictionary SET {0} = ? WHERE usage = ? AND languageID = 
+		    	UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
 		    	(SELECT id from Languages where language = ?)
 		    	'''.format(values['attribute']), 
 		    	(values['data'], 
-		    	values['USAGE'],
+		    	values['problem'],
 		    	values['LANGUAGE']))
 
 		except sqlite3.Error as error:
@@ -204,8 +204,8 @@ class Database(object):
 
 
 	def add_content(self, values, lang_name):
-		"""Adds content to the database.
-
+		"""Adds content to the database. Tries to insert and updates if 
+		row already exists.
 		"""
 		
 		try:
@@ -219,11 +219,11 @@ class Database(object):
 				for new_row in values:
 					self._db_instance.execute('''
 				    	INSERT or REPLACE into Dictionary 
-				    	(id, languageID, usage, execution, comment, code)
-				    	VALUES((SELECT id from Dictionary where usage = ? AND languageID = 
+				    	(id, languageID, problem, solution, comment, code)
+				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)), 
 				    		(SELECT id from Languages where language = ?), ?, ?, ?,
-				    		COALESCE((SELECT code from Dictionary where usage = ? AND languageID = 
+				    		COALESCE((SELECT code from Dictionary where problem = ? AND languageID = 
 				    		(SELECT id from Languages where language = ?)), ''))
 					''', (new_row[0], lang_name, lang_name, new_row[0], 
 						new_row[1], new_row[2], new_row[0], lang_name))
@@ -234,8 +234,8 @@ class Database(object):
 
 
 	def retrieve_content(self, location, selection_type):
-		"""Retrieves execution, comment from the DB.
-		   Returns: List of tuples OR False
+		"""Retrieves content, packs them in indexed tuples if needed
+		and sends results back to calling function.
 		"""
 		
 		db_selection = self._select_from_db(location, selection_type)
@@ -247,8 +247,7 @@ class Database(object):
 
 
 	def _select_from_db(self, location, selection_type):
-		"""Selects from DB.
-		   Returns: DB cursor Object or False
+		"""Selects from DB. Runs correct query.
 
 		"""
 		
@@ -262,15 +261,15 @@ class Database(object):
 				if selection_type == "basic":
 			
 					selection = self._db_instance.execute('''
-					    SELECT usage, execution, code FROM Dictionary WHERE usage LIKE ? AND languageID = 
+					    SELECT problem, solution, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-				    ''', (location['USAGE']+'%', location['LANGUAGE']))
+				    ''', (location['problem']+'%', location['LANGUAGE']))
 
 
 				elif selection_type == "language":
 
 					selection = self._db_instance.execute('''
-				    	SELECT usage, execution, code FROM Dictionary WHERE languageID = 
+				    	SELECT problem, solution, code FROM Dictionary WHERE languageID = 
 				    	(SELECT id from Languages where language = ?) 
 				    ''', (location['LANGUAGE'], ))
 
@@ -278,17 +277,17 @@ class Database(object):
 				elif selection_type == "code":
 
 					selection = self._db_instance.execute('''
-					    SELECT code FROM Dictionary WHERE usage = ? and languageID = 
+					    SELECT code FROM Dictionary WHERE problem = ? and languageID = 
 				    	(SELECT id from Languages where language = ?)
-					    ''', (location['USAGE'], location['LANGUAGE']))
+					    ''', (location['problem'], location['LANGUAGE']))
 
 
 				elif selection_type == "full":
 
 					selection = self._db_instance.execute('''
-					    SELECT usage, execution, comment, code FROM Dictionary WHERE usage LIKE ? AND languageID = 
+					    SELECT problem, solution, comment, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-					''', (location['USAGE']+'%', location['LANGUAGE']))
+					''', (location['problem']+'%', location['LANGUAGE']))
 
 				return selection
 
@@ -297,10 +296,9 @@ class Database(object):
 			sys.exit(1)
 		
 
-
 def selected_rows_to_list(all_rows):
-	"""Packs all results from a SELECT statement into a list of tuples which contain
-	   the field values of the rows.
+	"""Packs all results from a SELECT statement into a list of tuples 
+	with index attached (at first position).	
 	"""
 
 	result_list = []
@@ -311,27 +309,25 @@ def selected_rows_to_list(all_rows):
 	else:
 		return False
 
-def determine_db_path():
-	"""Determines where the DB is located.
 
+def determine_db_path():
+	"""Determines where the DB file is located. If executable is frozen the location 
+	differentiates.
 	"""
 
 	if getattr(sys, 'frozen', False):
 	       # The application is frozen
 	    datadir = os.path.dirname(sys.executable)
-	    print datadir
 	else:
 	    # The application is not frozen
 	    datadir = os.path.dirname(__file__)
 
 	return datadir+'/res/codedict_db.DB'
 
-	
-
 
 def establish_db_connection(db_path):
 	"""Establishes the connection to the DB.
-	   Returns: DB object or False
+
 	"""
 
 	try:

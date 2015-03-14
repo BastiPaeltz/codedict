@@ -14,6 +14,9 @@ import textwrap
 import sys
 import os
 
+
+
+
 ###GENERAL ###
 
 
@@ -33,10 +36,10 @@ def start_process(cmd_line_args):
 	elif '--suffix' in relevant_args:
 		database = db.Database()	
 		database.set_suffix(relevant_args['LANGUAGE'].strip(), unicode(relevant_args['SUFFIX'], 'utf-8'))
-		print "Setting suffix {0} for {1} successfull.".format((
-			relevant_args['SUFFIX'], relevant_args['LANGUAGE']))
+		print "Setting suffix {0} for {1} successfull.".format(relevant_args['SUFFIX'], 
+			relevant_args['LANGUAGE'])
 
-	elif '--line-length' in relevant_args:
+	elif '--line' in relevant_args:
 		try:
 			int(relevant_args['INTEGER'])
 			database = db.Database()
@@ -80,7 +83,7 @@ def determine_proceeding(relevant_args):
 	elif '-c' in flags:
 		process_code_adding(body)
 	else:
-		print "An unexpected error has occured while processing {0} with flags {1}".format(body, flags)
+		print "An unexpected error has occured while processing {0} with options {1}".format(body, flags)
 
 
 def check_for_suffix(language, database):
@@ -174,7 +177,8 @@ def decide_where_to_print(table):
 	else:
 		valid_input = False
 		while not valid_input:
-			choice = raw_input("Output longer than 25 lines - print to console anyway? (y/n) ").strip().split(" ")[0]
+			choice = raw_input(("Output longer than 25 lines - print to console anyway? (y/n) ")
+				).strip().split(" ")[0]
 			if choice in ('y', 'yes', 'Yes', 'Y'):
 				valid_input = True
 				return "console"
@@ -322,7 +326,7 @@ def update_content(body, database=False):
 	if not database:
 		database = db.Database()
 
-	if body['attribute'] != 'DEL': 
+	if body['attribute'] != 'del': 
 		valid_input = False
 		while not valid_input:
 			try:
@@ -350,7 +354,7 @@ def insert_content():
 		except UnicodeError as error:
 			print error
 
-	for index, item in enumerate(('usage: ', 'execution: ', 'comment: ')):
+	for index, item in enumerate(('problem: ', 'solution: ', 'comment: ')):
 		valid_input = False
 		while not valid_input:
 			try: 
@@ -373,8 +377,8 @@ def determine_display_operation(body, flags):
 	"""
 
 	
-	if '--cut' in flags and 'USAGE' in body:
-		cut_usecase = body['USAGE']
+	if '--cut' in flags and 'problem' in body:
+		cut_usecase = body['problem']
 	else:
 		cut_usecase = False
 
@@ -386,18 +390,18 @@ def determine_display_operation(body, flags):
 	database = db.Database()
 
 	if '-e' in flags:
-		if not 'USAGE' in body:
-			body['USAGE'] = ""
+		if not 'problem' in body:
+			body['problem'] = ""
 		results = database.retrieve_content(body, "full")
-		column_list = ["Index", "usage", "execution", "comment", "code added?"]
+		column_list = ["index", "problem", "solution", "comment", "code added?"]
 	
-	elif not 'USAGE' in body:
+	elif not 'problem' in body:
 		results = database.retrieve_content(body, "language")
-		column_list = ["Index", "usage", "execution", "code added?"]			
+		column_list = ["index", "problem", "solution", "code added?"]			
 
 	else:
 		results = database.retrieve_content(body, "basic")
-		column_list = ["Index", "usage", "execution", "code added?"]
+		column_list = ["index", "problem", "solution", "code added?"]
 	
 
 	if results:
@@ -454,7 +458,7 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 	return (all_rows_as_list, result_table)
 
 
-###SECOND ###
+###FOLLOW UP ###
 
 def prompt_by_index(results, tmpfile=False):
 	"""Prompts the user for further commands after displaying content.
@@ -463,6 +467,8 @@ def prompt_by_index(results, tmpfile=False):
 
 	valid_input = False 
 	while not valid_input:
+
+		# clean up of previously created tempfile
 		user_input = (raw_input(
 		"Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n")
 		.strip().split(None, 1))
@@ -475,9 +481,8 @@ def prompt_by_index(results, tmpfile=False):
 				print error 
 				print "This error is not crucial for the program itself."
 
-
+		# abort with 'enter' 		
 		if not user_input:
-			# aborted
 			sys.exit(0)
 		index = user_input[0]
 		try:
@@ -485,13 +490,12 @@ def prompt_by_index(results, tmpfile=False):
 		except IndexError:
 			attribute = ""
 
-		print attribute
 
 		if len(user_input) <= 2 and index.isdigit() and int(index) >= 1 and int(index) <= len(results):	
 			actual_index = int(index)-1
 			valid_input = True
 			if attribute: 
-				if not attribute in ('usage', 'execution', 'comment', 'code', 'del'):
+				if not attribute in ('problem', 'solution', 'comment', 'code', 'del'):
 					print "Wrong attribute, Please try again."
 					valid_input = False
 				else:
@@ -508,7 +512,7 @@ def process_follow_up_operation(original_body, results, database, tmpfile):
 	"""
 
 	target, attribute = prompt_by_index(results, tmpfile)
-	original_body['USAGE'] = target[1]
+	original_body['problem'] = target[1]
 	
 	if attribute:
 		original_body['attribute'] = attribute
