@@ -1,0 +1,54 @@
+#!c:\python27\python.exe
+
+""" 
+Let's you compile and access your own personal dictionary 
+for programming via the command line with ease.
+
+Usage:
+  codedict -d LANGUAGE [PROBLEM] [-e --cut --hline]
+  codedict -c LANGUAGE PROBLEM
+  codedict -f LANGUAGE PATH-TO-FILE  
+  codedict -a 
+  codedict LANGUAGE --suffix SUFFIX
+  codedict --editor EDITOR
+  codedict --wait (off | on)
+  codedict --line INTEGER
+
+Options:
+
+  -d          Displays content from codedict.
+  -a          Adds content to codedict.
+  -c          Display and add code to codedict.
+  -f          Load content from file into codedict.
+  
+  -e          Displays every codedict value.
+
+  --editor      Sets your editor to the specified value. This has to be an executable.
+  --line        Sets the line length. The output table gets formated based on this value. 
+                Should match your console's line length.
+  --suffix      Sets the suffix for the specified language to the given value. 
+                This is convenient for syntax highlighting inside editors.  
+  --cut         Cutting search phrase from the output's 'problem' field. 
+  --hline       Prints a horizontal line between each row of the output table. 
+  --wait        Enabling this option This is needed on certain editors.  
+
+  --help        Show this screen.  
+  --version     Show version.
+
+
+"""
+
+
+#relative import
+from docopt import docopt 
+import processor 
+
+if __name__ == '__main__':
+
+    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.7")
+
+    try:
+        processor.start_process(COMMAND_LINE_ARGS)
+    except KeyboardInterrupt:
+        print "\nAborted!"
+	
