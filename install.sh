@@ -4,9 +4,9 @@ Install () {
 	
 	# $1 INSTALLTYPE $2 INSTALLDIR $3 EXEDIR
 	if [ $1 = '1' ]; then
-		LOCATION="general_installation/"
+		LOCATION="frozen/"
 	else
-		LOCATION="python_installation/"
+		LOCATION="source/"
 	fi
 
 	cd ${LOCATION}

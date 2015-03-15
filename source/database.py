@@ -7,6 +7,7 @@
 import sqlite3
 import sys
 import os
+import time
 
 
 
@@ -238,11 +239,14 @@ class Database(object):
 		and sends results back to calling function.
 		"""
 		
+		start = time.time()
 		db_selection = self._select_from_db(location, selection_type)
+		print "done sql", time.time()-start
 		if not selection_type == "code":	
 			selection_result = selected_rows_to_list(db_selection)
 		else:
 			selection_result = db_selection.fetchone()
+		print "done every sql", time.time()-start
 		return selection_result 		# returns False if no rows were selected			
 
 
