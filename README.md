@@ -18,7 +18,7 @@ A command-line dictionary for the developer who likes it organized.
      
   * And the **code** - Here is where you write your code examples (Note: this is only a suggestion, you can do whatever you want here.) Code is automatically brought up in your favorite editor so you can edit and view it where it is most comfortable.   
   
-  The little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier, since you can add anything up to complicated algorithms in code form to codedict. This way you have got everything together nicely at a central location. 
+  The little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier, since you can add anything up to complicated algorithms in code form to codedict. You can structure and maintain codedict the way you want.
   
 ## How to use   
   
@@ -59,7 +59,12 @@ Do your research - you shouldn't trust me blindly. **
 
 ## Troubleshooting / remaining options explained
 
-* Adding code doesn't work with my editor. I immediately see "Nothing changed".  
+* How can I see the complete usage pattern and all options?
+
+*'codedict --help' or 'codedict -h'*
+
+* Adding code doesn't work with my editor. I immediately see "Nothing changed".
+
 *This has something to do with editors behaving very differently in terms of how the executable gets invoked and how they deal with files they're currently working on.* **Set '--wait' to 'on' to solve this.** 
 
 * What is this '--cut' feature, I dont get it.
