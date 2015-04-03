@@ -343,7 +343,7 @@ def process_file_adding(body, flags):
 
 
 	try:
-		with open(body['PATH-TO-FILE']) as input_file:
+		with open(body['path-to-file']) as input_file:
 			file_text = input_file.read()
 			input_file.close()
 	except (OSError, IOError) as error:
@@ -514,7 +514,6 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 		#add modified row to table, add original row to return-list
 		result_table.add_row(single_row)
 		all_rows_as_list.append(list(row))
-	print "end build table", time.time()-start
 	return (all_rows_as_list, result_table)
 
 

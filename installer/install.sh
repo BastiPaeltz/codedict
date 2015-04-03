@@ -105,4 +105,3 @@ else
 	echo "Installation error - missing files."
 	exit 
 fi
-

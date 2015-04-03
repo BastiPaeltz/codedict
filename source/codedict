@@ -46,7 +46,7 @@ import processor
 
 if __name__ == '__main__':
 
-    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.7")
+    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.9")
 
     try:
         processor.start_process(COMMAND_LINE_ARGS)

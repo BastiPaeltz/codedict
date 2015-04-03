@@ -30,13 +30,13 @@ def start_process(cmd_line_args):
 					if value is not False and value is not None})
 
 	if '--editor' in relevant_args:
-		set_editor(relevant_args['EDITOR'])
+		set_editor(relevant_args['editor'])
 		
 	elif '--suffix' in relevant_args:
-		set_suffix(relevant_args['SUFFIX'], relevant_args['LANGUAGE'])
+		set_suffix(relevant_args['suffix'], relevant_args['language'])
 
 	elif '--line' in relevant_args:
-		set_line_length(relevant_args['INTEGER'])
+		set_line_length(relevant_args['integer'])
 
 	elif '--wait' in relevant_args:
 		del relevant_args['--wait']
@@ -103,10 +103,10 @@ def split_arguments(arguments):
 
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
-		if key in ('-e', '-c', '-a', '-d', '-f', '--cut', '--hline', '--suffix'):
+		if key in ('-e', '-c', '-a', '-d', '-f', '--code', '--cut', '--hline', '--suffix'):
 			flags[key] = item
 		else:
-			request[key] = item 
+			request[key.lower()] = item 
 
 	return (request, flags)
 
@@ -119,7 +119,7 @@ def determine_proceeding(relevant_args):
 	body, flags = split_arguments(relevant_args)
 
 	if '-f' in flags:
-		process_file_adding(body)
+		process_file_adding(body, flags)
 	elif '-d' in flags:
 		determine_display_operation(body, flags)
 	elif '-a' in flags:
@@ -256,7 +256,7 @@ def code_input_from_editor(suffix, database, existing_code):
 
 		file_name = tmpfile.name
 
-		if sys.platform == "win32" or wait_enabled: # windows doing windows things
+		if sys.platform == "win32" or wait_enabled: # windows or wait enabled 
 			try:
 	  			subprocess.Popen(editor_list + [tmpfile.name])
 	  		except (OSError, IOError, ValueError) as error:
@@ -317,7 +317,7 @@ def process_code_adding(body, database=False, code_of_target=False):
 	else:
 		existing_code = code_of_target
 
-	suffix = check_for_suffix(body['LANGUAGE'], database)
+	suffix = check_for_suffix(body['language'], database)
 	body['data'] = code_input_from_editor(suffix, database, existing_code)
 
 	try:
@@ -336,24 +336,30 @@ def process_code_adding(body, database=False, code_of_target=False):
 
 ###FILE ###
 
-def process_file_adding(body):
+def process_file_adding(body, flags):
 	"""Processes adding content to DB from a file.
 
 	"""
-	
+
+
 	try:
-		with open(body['PATH-TO-FILE']) as input_file:
+		with open(body['path-to-file']) as input_file:
 			file_text = input_file.read()
 			input_file.close()
 	except (OSError, IOError) as error:
 		print "File Error({0}): {1}".format(error.errno, error.strerror)
 		sys.exit(1)
 
-	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
-		file_text, re.UNICODE))
-
 	database = db.Database()
- 	database.add_content(all_matches, body['LANGUAGE'])
+
+	if '--code' in flags:
+		body['data'] = file_text
+		database.upsert_code(body)	
+	else:
+		all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|', 
+		file_text, re.UNICODE))
+		print all_matches
+		database.add_content(all_matches, body['language'])
  	print "Finished - updated your codedict successfully."
 
 	
@@ -508,7 +514,6 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 		#add modified row to table, add original row to return-list
 		result_table.add_row(single_row)
 		all_rows_as_list.append(list(row))
-	print "end build table", time.time()-start
 	return (all_rows_as_list, result_table)
 
 
