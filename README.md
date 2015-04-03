@@ -1,12 +1,12 @@
 # codedict
 
-A command-line dictionary for the developer who likes it organized.
+#### A command-line dictionary for the developer who likes it organized.
 
 ## What is it?
 
 **codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it. Lightweight, locally stored and easy to use, you can create your own *reference*, *documentation* or *dictionary* for development with codedict.   
   
-  codedict follows the classic *Cookbook* approach and defines *5 values* for every 'vocabulary' :  
+  **codedict follows the classic *Cookbook* approach and defines 5 values for every 'vocabulary'** :  
 
   * The actual (programming) **language** - e.g. 'python'
  
@@ -18,7 +18,7 @@ A command-line dictionary for the developer who likes it organized.
      
   * And the **code** - Here is where you write your code examples (Note: this is only a suggestion, you can do whatever you want here.) Code is automatically brought up in your favorite editor so you can edit and view it where it is most comfortable.   
   
-  The little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier, since you can add anything up to complicated algorithms in code form to codedict. You can structure and maintain codedict the way you want.
+  The little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier, since you can add anything up to complicated algorithms in code form to codedict. **You can structure and maintain codedict the way you want.**
   
 ## How to use   
   
@@ -50,10 +50,8 @@ See the sample.jpeg how to possibly structure such a file.
 
   *INSTALL_DIR and EXE_DIR*: You can specify a directory where the actual executable respectively the required libraries / source files will be placed. You won't require *sudo* rights to install if neither of those directories is in root land. 
   
-  **If you are uncertain if the compiled file is malicious test it with antivirus software.
-Do your research - you shouldn't trust me blindly. ** 
+  **If you are uncertain if the compiled file is malicious test it with antivirus software. Do your research - you shouldn't trust me blindly.** 
   
-
   *Not available for Windows yet.*  
 
 
@@ -69,11 +67,11 @@ Do your research - you shouldn't trust me blindly. **
 
 * What is this '--cut' feature, I dont get it.
 
-*One way to structure your codedict is by generic terms. Have a look at the 'sample.jpeg'. 'data types' and 'characteristics' generic type is 'lang'. So when you want to display all language features without the nasty 'lang' output in front of every row, add '--cut'.*
+*One way to structure your codedict is by generic terms. Have a look at the **sample.jpeg**. 'data types' and 'characteristics' generic type is 'lang'. So when you want to display all language features without the nasty 'lang' output in front of every row, add '--cut'.*
 
 * Fair enough. But what does '--code' do when adding from a file?
 
-*By default the content of the file will be parsed like described in the related section above. When '--cut' is set and a 'problem' is specified, the file's content will not be parsed but instead set as the code field (of that specified 'problem').*
+*By default the content of the file will be parsed like described in the related section above. When '--cut' is set and a 'problem' is specified, the file's content will not be parsed but instead set as the* **code** *field (of that specified 'problem').*
 
 ## License
   
