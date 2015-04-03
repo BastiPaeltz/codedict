@@ -9,9 +9,13 @@
   For every 'vocabulary' codedict defines *5 values*:  
 
   * The actual (programming) **language** - e.g. 'python'
-  * The **problem** - What do you want to do? - 'adding element to a list' for instance  
-  * The **solution** - How do you accomplish that? - 'list.append(element)' for instance  
-  * The **comment** - A place for further notes - You can note here where you have found that command, link to online documentation or remind yourself with 'VERY PERFORMANT!' .  
+ 
+  * The **problem** - What do you want to do? - 'adding element to a list' for instance
+    
+  * The **solution** - How do you accomplish that? - 'list.append(element)' for instance 
+   
+  * The **comment** - A place for further notes - You can note here where you have found that command, link to online documentation or remind yourself with 'VERY PERFORMANT!' or whatever.
+     
   * And the **code** - Here is where you write your code examples (Note: this is only a suggestion, you can do whatever you want here.) Code is automatically brought up in your favorite editor so you can edit and view it where it is most comfortable.   
   
   Our little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier. See TODO for different samples. 
@@ -32,19 +36,19 @@
   * codedict **-d for DISPLAY**
   	* Displays content from your codedict. Either for a complete language or for only certain use cases, if you want. The output gets printed nicely to console or to your editor in table form. Afterwards you can do further operations on your result, like updating the comment for example or editing the code.  
 
-And the complete **usage pattern**:   
-  codedict -d LANGUAGE [PROBLEM] [-e --cut --hline]
-  codedict -c LANGUAGE PROBLEM
-  codedict -f LANGUAGE PATH-TO-FILE  
-  codedict -a 
-  codedict LANGUAGE --suffix SUFFIX
-  codedict --editor EDITOR
-  codedict --wait (off | on)
-  codedict --line INTEGER  
+And the complete **usage pattern**:     
+  codedict -d LANGUAGE [PROBLEM] [-e --cut --hline]  
+  codedict -c LANGUAGE PROBLEM  
+  codedict -f LANGUAGE PATH-TO-FILE    
+  codedict -a   
+  codedict LANGUAGE --suffix SUFFIX  
+  codedict --editor EDITOR  
+  codedict --wait (off | on)  
+  codedict --line INTEGER    
   
 ## How can I install it?
-  For now, just 'git clone' and run the <blockquote>installer.sh</blockquote> for your system (basically '*x' for everything except Windows). 
-  *On Windows a bash, sh or similar shell is required.*
+  For now, just 'git clone' and run the <code>installer.sh</code> for your system (basically '*x' for everything except Windows).   
+  *On Windows: a bash, sh or similar shell is required.*  
   *Additionally you have to implement an extra bat script to make codedict runnable from everywhere. Sorry, I'm not really a Windows guy.*   
 
 ## License
