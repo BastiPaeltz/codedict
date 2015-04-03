@@ -7,7 +7,6 @@
 import sqlite3
 import sys
 import os
-import time
 
 
 
@@ -180,11 +179,16 @@ class Database(object):
 		try:
 			with self._db_instance:
 
+
+				#add language to lang db if not exists
 				self._db_instance.execute('''
-					UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
+				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+				''', (values['LANGUAGE'], ))
+				
+				self._db_instance.execute('''
+					UPDATE Dictionary SET code = ? WHERE problem = ? AND languageID = 
 					(SELECT id from Languages where language = ?)
-					'''.format(values['attribute']), 
-					(values['data'], 
+					''', (values['data'], 
 					values['problem'],
 					values['LANGUAGE']))
 				
@@ -239,14 +243,11 @@ class Database(object):
 		and sends results back to calling function.
 		"""
 		
-		start = time.time()
 		db_selection = self._select_from_db(location, selection_type)
-		print "done sql", time.time()-start
 		if not selection_type == "code":	
 			selection_result = selected_rows_to_list(db_selection)
 		else:
 			selection_result = db_selection.fetchone()
-		print "done every sql", time.time()-start
 		return selection_result 		# returns False if no rows were selected			
 
 

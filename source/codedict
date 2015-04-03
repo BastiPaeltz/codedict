@@ -7,7 +7,7 @@ for programming via the command line with ease.
 Usage:
   codedict -d LANGUAGE [PROBLEM] [-e --cut --hline]
   codedict -c LANGUAGE PROBLEM
-  codedict -f LANGUAGE PATH-TO-FILE  
+  codedict -f LANGUAGE PATH-TO-FILE [--code PROBLEM] 
   codedict -a 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
@@ -18,7 +18,7 @@ Options:
 
   -d          Displays content from codedict.
   -a          Adds content to codedict.
-  -c          Display and add code to codedict.
+  -c          Display and add/edit code to codedict.
   -f          Load content from file into codedict.
   
   -e          Displays every codedict value.
@@ -31,6 +31,7 @@ Options:
   --cut         Cutting search phrase from the output's 'problem' field. 
   --hline       Prints a horizontal line between each row of the output table. 
   --wait        Enabling this option This is needed on certain editors.  
+  --code        Content of file will be set as 'code' value of the given problem. 
 
   --help        Show this screen.  
   --version     Show version.

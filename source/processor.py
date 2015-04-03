@@ -103,7 +103,7 @@ def split_arguments(arguments):
 
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
-		if key in ('-e', '-c', '-a', '-d', '-f', '--cut', '--hline', '--suffix'):
+		if key in ('-e', '-c', '-a', '-d', '-f', '--code', '--cut', '--hline', '--suffix'):
 			flags[key] = item
 		else:
 			request[key] = item 
@@ -119,7 +119,7 @@ def determine_proceeding(relevant_args):
 	body, flags = split_arguments(relevant_args)
 
 	if '-f' in flags:
-		process_file_adding(body)
+		process_file_adding(body, flags)
 	elif '-d' in flags:
 		determine_display_operation(body, flags)
 	elif '-a' in flags:
@@ -256,7 +256,7 @@ def code_input_from_editor(suffix, database, existing_code):
 
 		file_name = tmpfile.name
 
-		if sys.platform == "win32" or wait_enabled: # windows doing windows things
+		if sys.platform == "win32" or wait_enabled: # windows or wait enabled 
 			try:
 	  			subprocess.Popen(editor_list + [tmpfile.name])
 	  		except (OSError, IOError, ValueError) as error:
@@ -336,11 +336,12 @@ def process_code_adding(body, database=False, code_of_target=False):
 
 ###FILE ###
 
-def process_file_adding(body):
+def process_file_adding(body, flags):
 	"""Processes adding content to DB from a file.
 
 	"""
-	
+
+
 	try:
 		with open(body['PATH-TO-FILE']) as input_file:
 			file_text = input_file.read()
@@ -349,11 +350,16 @@ def process_file_adding(body):
 		print "File Error({0}): {1}".format(error.errno, error.strerror)
 		sys.exit(1)
 
-	all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
-		file_text, re.UNICODE))
-
 	database = db.Database()
- 	database.add_content(all_matches, body['LANGUAGE'])
+
+	if '--code' in flags:
+		body['data'] = file_text
+		body['problem'] = body['PROBLEM'] # i hate myself
+		database.upsert_code(body)	
+	else:
+		all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
+		file_text, re.UNICODE))
+		database.add_content(all_matches, body['LANGUAGE'])
  	print "Finished - updated your codedict successfully."
 
 	
