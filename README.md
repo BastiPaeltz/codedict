@@ -37,7 +37,7 @@ See the sample.jpeg how to possibly structure such a file.
   * codedict **-d for DISPLAY**
   	* Displays content from your codedict. Either for an entire language or only for certain problems. When doing the latter, all problems *starting* with your input get matched (e.g. *'-d python foo'* matches the problem foo as well as foobar for the language python) 
     This way, you can structure your codedict nicely (see the sample.jpeg).  
-    The output gets printed to console or to your editor in table form. Afterwards you can do further operations on your result, like updating the comment for example or editing the code.    
+    The output gets printed to console or to your editor in table form. Afterwards you can do further operations on your result, like updating the comment for example or editing the code.     
 
   
 ## How to install
@@ -60,6 +60,11 @@ See the sample.jpeg how to possibly structure such a file.
 * How can I see the complete usage pattern and all options?
 
 *'codedict --help' or 'codedict -h'*
+
+* After displaying my table I get prompted with:   
+**'Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort:'** 
+
+*Based on the table you can change your codedict this way. Choose the vocabulary you want to change by index. ATTRIBUTE can be one of the vocabularies' fields (problem, solution, comment, code) or 'DEL', if you want to delete that vocabulary entirely.*
 
 * Adding code doesn't work with my editor. I immediately see "Nothing changed".
 
