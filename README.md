@@ -6,7 +6,7 @@ A command-line dictionary for the developer who likes it organized.
 
 **codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it. Lightweight, locally stored and easy to use, you can create your own *reference*, *documentation* or *dictionary* for development with codedict.   
   
-  codedict defines *5 values* for every 'vocabulary' :  
+  codedict follows the classic *Cookbook* approach and defines *5 values* for every 'vocabulary' :  
 
   * The actual (programming) **language** - e.g. 'python'
  
@@ -48,8 +48,11 @@ See the sample.jpeg how to possibly structure such a file.
   * frozen: Installs a frozen (compiled) version. This won't require a python interpreter installed on your system.
   * source: Installs a source (python) version. This will require a python 2.7 interpreter installed on your system.
 
-  *INSTALL_DIR and EXE_DIR*: You can specify a directory where the actual executable respectively the required libraries / source files will be placed. 
-
+  *INSTALL_DIR and EXE_DIR*: You can specify a directory where the actual executable respectively the required libraries / source files will be placed. You won't require *sudo* rights to install if neither of those directories is in root land. 
+  
+  **If you are uncertain if the compiled file is malicious test it with antivirus software.
+Do your research - you shouldn't trust me blindly. ** 
+  
 
   *Not available for Windows yet.*  
 
@@ -57,11 +60,11 @@ See the sample.jpeg how to possibly structure such a file.
 ## Troubleshooting / remaining options explained
 
 * Adding code doesn't work with my editor. I immediately see "Nothing changed".  
-*This has something to do with editors behaving very differently in terms of how the executable gets invoked and how they deal with files they're currently working on. **Set '--wait' to 'on' to solve this.** *
+*This has something to do with editors behaving very differently in terms of how the executable gets invoked and how they deal with files they're currently working on.* **Set '--wait' to 'on' to solve this.** 
 
 * What is this '--cut' feature, I dont get it.
 
-*One way to structure your codedict is by generic terms. Have a look at the 'sample.jpeg'. 'data types' and 'characteristics' generic type is 'lang'. So when you want to display all language features without the nasty 'lang' output in front of every row, you can specify --cut to do that.*
+*One way to structure your codedict is by generic terms. Have a look at the 'sample.jpeg'. 'data types' and 'characteristics' generic type is 'lang'. So when you want to display all language features without the nasty 'lang' output in front of every row, add '--cut'.*
 
 * Fair enough. But what does '--code' do when adding from a file?
 
