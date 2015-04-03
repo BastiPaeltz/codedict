@@ -30,13 +30,13 @@ def start_process(cmd_line_args):
 					if value is not False and value is not None})
 
 	if '--editor' in relevant_args:
-		set_editor(relevant_args['EDITOR'])
+		set_editor(relevant_args['editor'])
 		
 	elif '--suffix' in relevant_args:
-		set_suffix(relevant_args['SUFFIX'], relevant_args['LANGUAGE'])
+		set_suffix(relevant_args['suffix'], relevant_args['language'])
 
 	elif '--line' in relevant_args:
-		set_line_length(relevant_args['INTEGER'])
+		set_line_length(relevant_args['integer'])
 
 	elif '--wait' in relevant_args:
 		del relevant_args['--wait']
@@ -106,7 +106,7 @@ def split_arguments(arguments):
 		if key in ('-e', '-c', '-a', '-d', '-f', '--code', '--cut', '--hline', '--suffix'):
 			flags[key] = item
 		else:
-			request[key] = item 
+			request[key.lower()] = item 
 
 	return (request, flags)
 
@@ -317,7 +317,7 @@ def process_code_adding(body, database=False, code_of_target=False):
 	else:
 		existing_code = code_of_target
 
-	suffix = check_for_suffix(body['LANGUAGE'], database)
+	suffix = check_for_suffix(body['language'], database)
 	body['data'] = code_input_from_editor(suffix, database, existing_code)
 
 	try:
@@ -354,12 +354,12 @@ def process_file_adding(body, flags):
 
 	if '--code' in flags:
 		body['data'] = file_text
-		body['problem'] = body['PROBLEM'] # i hate myself
 		database.upsert_code(body)	
 	else:
-		all_matches = (re.findall(r'%.*?\|(.*?)\|[^\|%]*?\|(.*?)\|[^\|%]*\|(.*?)\|', 
+		all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|', 
 		file_text, re.UNICODE))
-		database.add_content(all_matches, body['LANGUAGE'])
+		print all_matches
+		database.add_content(all_matches, body['language'])
  	print "Finished - updated your codedict successfully."
 
 	

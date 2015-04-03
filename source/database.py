@@ -145,7 +145,7 @@ class Database(object):
 				self._db_instance.execute('''
 			    	DELETE from Dictionary WHERE problem = ? AND languageID = 
 			    	(SELECT id from Languages where language = ?)
-			    ''', (values['problem'], values['LANGUAGE']))
+			    ''', (values['problem'], values['language']))
 			    
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -165,7 +165,7 @@ class Database(object):
 		    	'''.format(values['attribute']), 
 		    	(values['data'], 
 		    	values['problem'],
-		    	values['LANGUAGE']))
+		    	values['language']))
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -183,14 +183,14 @@ class Database(object):
 				#add language to lang db if not exists
 				self._db_instance.execute('''
 				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
-				''', (values['LANGUAGE'], ))
+				''', (values['language'], ))
 				
 				self._db_instance.execute('''
 					UPDATE Dictionary SET code = ? WHERE problem = ? AND languageID = 
 					(SELECT id from Languages where language = ?)
 					''', (values['data'], 
 					values['problem'],
-					values['LANGUAGE']))
+					values['language']))
 				
 				self._db_instance.execute('''
 						INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
@@ -198,8 +198,8 @@ class Database(object):
 				    		(SELECT id from Languages where language = ?)) 
 				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
 				''', (values['problem'],
-					values['LANGUAGE'], 
-					values['LANGUAGE'], 
+					values['language'], 
+					values['language'], 
 					values['problem'], 
 					values['data']))
 
@@ -268,7 +268,7 @@ class Database(object):
 					selection = self._db_instance.execute('''
 					    SELECT problem, solution, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-				    ''', (location['problem']+'%', location['LANGUAGE']))
+				    ''', (location['problem']+'%', location['language']))
 
 
 				elif selection_type == "language":
@@ -276,7 +276,7 @@ class Database(object):
 					selection = self._db_instance.execute('''
 				    	SELECT problem, solution, code FROM Dictionary WHERE languageID = 
 				    	(SELECT id from Languages where language = ?) 
-				    ''', (location['LANGUAGE'], ))
+				    ''', (location['language'], ))
 
 
 				elif selection_type == "code":
@@ -284,7 +284,7 @@ class Database(object):
 					selection = self._db_instance.execute('''
 					    SELECT code FROM Dictionary WHERE problem = ? and languageID = 
 				    	(SELECT id from Languages where language = ?)
-					    ''', (location['problem'], location['LANGUAGE']))
+					    ''', (location['problem'], location['language']))
 
 
 				elif selection_type == "full":
@@ -292,7 +292,7 @@ class Database(object):
 					selection = self._db_instance.execute('''
 					    SELECT problem, solution, comment, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
-					''', (location['problem']+'%', location['LANGUAGE']))
+					''', (location['problem']+'%', location['language']))
 
 				return selection
 

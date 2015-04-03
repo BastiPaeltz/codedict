@@ -20,7 +20,7 @@
   
   Our little 'add to list' is only the smallest and least beneficial thing you can do with codedict to make your life easier. See TODO for different samples. 
   
-## Show me how to use it!    
+## How to use it!    
   
   There are 4 elementary commands:
   
@@ -49,7 +49,7 @@ And the complete **usage pattern**:
 ## How can I install it?
   For now, just 'git clone' and run the <code>installer.sh</code> for your system (basically '*x' for everything except Windows).   
   *On Windows: a bash, sh or similar shell is required.*  
-  *Additionally you have to implement an extra bat script to make codedict runnable from everywhere. Sorry, I'm not really a Windows guy.*   
+  *Additionally you have to implement an extra bat script or similar to make codedict runnable from everywhere. Sorry, I'm not really a Windows guy.*   
 
 ## License
   
