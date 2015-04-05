@@ -9,9 +9,12 @@ Usage:
   codedict -c LANGUAGE PROBLEM
   codedict -f LANGUAGE PATH-TO-FILE [--code PROBLEM] 
   codedict -a
-  codedict -l LANGUAGE PROBLEM 
+  codedict -l URL LINK_NAME 
+  codedict -l --display LINK_NAME [LANGUAGE] [PROBLEM]
+  codedict -l --open LINK_NAME 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
+  codedict --browser BROWSER
   codedict --wait (off | on)
   codedict --line INTEGER
 
@@ -21,7 +24,8 @@ Options:
   -a          Adds content to codedict.
   -c          Display and add/edit code to codedict.
   -f          Load content from file into codedict.
-  
+  -l          Open, display or add links.
+   
   -e          Displays every codedict value. 
 
   --editor      Sets your editor to the specified value. This has to be an executable.

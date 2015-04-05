@@ -30,12 +30,12 @@ class Database(object):
 			print "Error while reaching DB."
 			sys.exit(1) 
 		
-		if not self._create_table():
+		if not self._create_tables():
 			print "Error while creating DB tables."
 			sys.exit(1)
 
  
-	def _create_table(self):
+	def _create_tables(self):
 		"""Creates tables 'dictionary', 'languages' and 'config' if they not exist.
 
 		"""
@@ -51,13 +51,20 @@ class Database(object):
 				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Dictionary 
 			    	(id INTEGER PRIMARY KEY, languageID INTEGER, 
-			    		problem TEXT, solution TEXT, comment TEXT, link TEXT, code TEXT)
+			    		problem TEXT, solution TEXT, comment TEXT, linkID INTEGER, code TEXT)
 				''')
 
 				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Config (configItem TEXT PRIMARY KEY, value TEXT)
 				''')
+
+				self._db_instance.execute('''
+					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
+					URL text, description TEXT, languageID INTEGER, problem TEXT
+				''')
+
 				return True
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			return False
@@ -159,13 +166,106 @@ class Database(object):
 		try:
 			with self._db_instance:
 				# update database
+
+				if values['attribute'] != 'link':
+					self._db_instance.execute('''
+			    	UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
+			    	(SELECT id from Languages where language = ?)
+			    	'''.format(values['attribute']), 
+					(values['data'], 
+					values['problem'],
+					values['language']))
+				else:
+					self._db_instance.execute('''
+			    	UPDATE Links SET {0} = ? WHERE problem = ? AND languageID = 
+			    	(SELECT id from Languages where language = ?)
+			    	'''.format(values['attribute']), 
+			    	(values['data'], 
+			    	values['problem'],
+			    	values['language']))
+
+
+		except sqlite3.Error as error:
+			print "A database error has occured: ", error
+			sys.exit(1)
+
+### LINKS
+
+	def upsert_links(self, values):
+		"""Upserts (insert or update if exists) links into Link table.
+
+		"""
+
+		try:
+			with self._db_instance:
+
+
+				#add language to lang db if not exists
 				self._db_instance.execute('''
-		    	UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
-		    	(SELECT id from Languages where language = ?)
-		    	'''.format(values['attribute']), 
-		    	(values['data'], 
-		    	values['problem'],
-		    	values['language']))
+				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+				''', (values['language'], ))
+				
+				self._db_instance.execute('''
+					UPDATE Dictionary SET code = ? WHERE problem = ? AND languageID = 
+					(SELECT id from Languages where language = ?)
+					''', (values['data'], 
+					values['problem'],
+					values['language']))
+				
+				self._db_instance.execute('''
+						INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
+				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
+				    		(SELECT id from Languages where language = ?)) 
+				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
+				''', (values['problem'],
+					values['language'], 
+					values['language'], 
+					values['problem'], 
+					values['data']))
+
+		except sqlite3.Error as error:
+			print "A database error has occured: ", error
+			sys.exit(1)
+
+
+	def delete_links(self, values):
+		"""Deletes links from Link table.
+
+		"""
+
+		try:
+			with self._db_instance:
+				
+				self._db_instance.execute('''
+			    	DELETE from Dictionary WHERE problem = ? AND languageID = 
+			    	(SELECT id from Languages where language = ?)
+			    ''', (values['problem'], values['language']))
+			    
+		except sqlite3.Error as error:
+			print "A database error has occured: ", error
+			sys.exit(1)
+
+
+	def retrieve_link(self, values, selection_type):
+		"""Retrieves links into Link table.
+
+		"""
+		try:
+			with self._db_instance:
+				if selection_type == 'open':
+
+					selection = self._db_instance.execute('''
+					SELECT url from Links WHERE name = ? AND langID = 
+					(SELECT id from Languages where language = ?) AND problem = ?
+					''', (values['link_name'], values['language'], values['problem'])) 
+					return selection.fetchone()
+
+				else: # display 
+					selection = self._db_instance.execute('''
+					SELECT name, description from Links WHERE name = ? AND langID = 
+					(SELECT id from Languages where language = ?) AND problem = ?
+					''', (values['link_name'], values['language'], values['problem'])) 
+					return selected_rows_to_list(selection_type)
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
