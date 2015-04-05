@@ -51,7 +51,7 @@ class Database(object):
 				self._db_instance.execute('''
 			    	CREATE table IF NOT EXISTS Dictionary 
 			    	(id INTEGER PRIMARY KEY, languageID INTEGER, 
-			    		problem TEXT, solution TEXT, comment TEXT, code TEXT)
+			    		problem TEXT, solution TEXT, comment TEXT, link TEXT, code TEXT)
 				''')
 
 				self._db_instance.execute('''
@@ -290,7 +290,7 @@ class Database(object):
 				elif selection_type == "full":
 
 					selection = self._db_instance.execute('''
-					    SELECT problem, solution, comment, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
+					    SELECT problem, solution, comment, link, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
 					    (SELECT id from Languages where language = ?) 
 					''', (location['problem']+'%', location['language']))
 

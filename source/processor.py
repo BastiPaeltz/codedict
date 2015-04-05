@@ -14,8 +14,8 @@ import textwrap
 import sys
 import os
 import time
-
-
+import urlparse
+import webbrowser
 
 
 ###GENERAL ###
@@ -31,6 +31,9 @@ def start_process(cmd_line_args):
 
 	if '--editor' in relevant_args:
 		set_editor(relevant_args['editor'])
+
+	elif '--browser' in relevant_args:
+		set_browser(relevant_args['browser'])
 		
 	elif '--suffix' in relevant_args:
 		set_suffix(relevant_args['suffix'], relevant_args['language'])
@@ -96,6 +99,16 @@ def set_line_length(length):
 		print "Console line length must be an integer."
 
 
+def set_browser(browser):
+	"""Sets the browser.
+
+	"""
+
+	database = db.Database()
+	database.set_config_item('browser', unicode(browser.strip(), 'utf-8'))
+	print "Setting browser {0} successfull.".format(browser)
+
+
 def split_arguments(arguments):
 	"""Splits the given arguments from the command line in content and flags.
 
@@ -103,7 +116,7 @@ def split_arguments(arguments):
 
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
-		if key in ('-e', '-c', '-a', '-d', '-f', '--code', '--cut', '--hline', '--suffix'):
+		if key in ('-e', '-c', '-l', '-a', '-d', '-f', '--code', '--cut', '--hline', '--suffix', '--open'):
 			flags[key] = item
 		else:
 			request[key.lower()] = item 
@@ -126,6 +139,8 @@ def determine_proceeding(relevant_args):
 		process_add_content(body, flags)
 	elif '-c' in flags:
 		process_code_adding(body)
+	elif '-l' in flags:
+		process_links(body, flags)
 	else:
 		print "An unexpected error has occured while processing {0} with options {1}".format(body, flags)
 
@@ -365,6 +380,43 @@ def process_file_adding(body, flags):
 	
 ###ADD ###
 
+def process_links(body, flags):
+	"""Processes link to codedict.
+
+	"""
+
+	if not '--open' in flags:
+		url = unicode(raw_input("Enter url for your link").strip(), 'utf-8')	
+
+		link_name = unicode(raw_input("Enter name for your link").strip(), 'utf-8')	
+
+		
+		if not link_name:
+			# set name based on url scheme 
+			try:
+				entire_url = urlparse.urlsplit(url)
+			except Error as e:
+				print "This is not a valid url. ", e
+				sys.exit(1)
+
+			for url_part in reversed(entire_url):
+				if url_part:
+					subpart = url_part.split("/")
+			        link_name = subpart[len(subpart)-1].replace('.html', '')
+			        break
+		database = db.Database()
+		database.update_content()
+	else:
+		database = db.Database()
+		db_result = database.retrieve_link(body)
+		if db_result[0]:
+			requested_url = db_result[0]
+		else:
+			print "No links found."
+			sys.exit(0)
+
+		webbrowser.open_new(requested_url)
+
 def process_add_content(body, flags):
 	"""Processes content adding. 
 
@@ -553,7 +605,7 @@ def prompt_by_index(results, tmpfile=False):
 		if len(user_input) <= 2 and index.isdigit() and int(index) >= 1 and int(index) <= len(results):	
 
 			actual_index = int(index)-1
-			if attribute and attribute in ('problem', 'solution', 'comment', 'code', 'del'):
+			if attribute and attribute in ('problem', 'solution', 'comment', 'code', 'link', 'del'):
 				valid_input = True
 			else:
 				print "Wrong attribute, Please try again."
@@ -573,7 +625,9 @@ def process_follow_up_operation(original_body, results, database, tmpfile):
 	
 	if attribute != 'code':
 		original_body['attribute'] = attribute
-		return update_content(original_body, database=database)
+		if attribute == 'link':
+			add_link(original_body)
+		return update_content(original_body, database=database) 
 	else:
 		code_of_target = target[len(target)-1]
 		if not code_of_target:
