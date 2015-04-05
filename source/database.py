@@ -60,7 +60,7 @@ class Database(object):
 
 				self._db_instance.execute('''
 					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
-					URL text, description TEXT, languageID INTEGER, problem TEXT
+					URL text, description TEXT, language TEXT)
 				''')
 
 				return True
@@ -191,7 +191,7 @@ class Database(object):
 
 ### LINKS
 
-	def upsert_links(self, values):
+	def upsert_links(self, values, operation_type='add'):
 		"""Upserts (insert or update if exists) links into Link table.
 
 		"""
@@ -200,29 +200,17 @@ class Database(object):
 			with self._db_instance:
 
 
-				#add language to lang db if not exists
+				#add link to Links db if not exists
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
-				''', (values['language'], ))
+				INSERT OR IGNORE INTO Links (name, url) VALUES (?, ?)
+				''', (values['link_name'], values['url']))
 				
-				self._db_instance.execute('''
-					UPDATE Dictionary SET code = ? WHERE problem = ? AND languageID = 
-					(SELECT id from Languages where language = ?)
-					''', (values['data'], 
-					values['problem'],
-					values['language']))
+				if operation_type == 'upsert':
 				
-				self._db_instance.execute('''
-						INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
-				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)) 
-				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
-				''', (values['problem'],
-					values['language'], 
-					values['language'], 
-					values['problem'], 
-					values['data']))
-
+					self._db_instance.execute('''
+					UPDATE Links SET language = (SELECT language from Languages where language = ?) AND WHERE link_name = ?
+					''', (values['language'], values['link_name']))
+				
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -237,16 +225,16 @@ class Database(object):
 			with self._db_instance:
 				
 				self._db_instance.execute('''
-			    	DELETE from Dictionary WHERE problem = ? AND languageID = 
-			    	(SELECT id from Languages where language = ?)
-			    ''', (values['problem'], values['language']))
+			    	DELETE from Links WHERE url = ? AND language = 
+			    	(SELECT language from Languages where language = ?)
+			    ''', (values['url'], values['language']))
 			    
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
 
 
-	def retrieve_link(self, values, selection_type):
+	def retrieve_links(self, values, selection_type):
 		"""Retrieves links into Link table.
 
 		"""
@@ -255,17 +243,25 @@ class Database(object):
 				if selection_type == 'open':
 
 					selection = self._db_instance.execute('''
-					SELECT url from Links WHERE name = ? AND langID = 
-					(SELECT id from Languages where language = ?) AND problem = ?
-					''', (values['link_name'], values['language'], values['problem'])) 
+					SELECT url from Links WHERE name LIKE ? 
+					''', (values['link_name']+'%', )) 
 					return selection.fetchone()
 
 				else: # display 
-					selection = self._db_instance.execute('''
-					SELECT name, description from Links WHERE name = ? AND langID = 
-					(SELECT id from Languages where language = ?) AND problem = ?
-					''', (values['link_name'], values['language'], values['problem'])) 
-					return selected_rows_to_list(selection_type)
+					print values
+					if selection_type == 'display':
+						selection = self._db_instance.execute('''
+						SELECT url, name, description from Links WHERE name LIKE ?
+						''', (values['link_name']+'%', )) 
+
+					else: # lang display
+						selection = self._db_instance.execute('''
+						SELECT url, name, description, language from Links WHERE name LIKE ?
+						AND language = (SELECT language from Languages where language = ?)
+						''', (values['link_name']+'%', values['language'])) 
+
+					selection_list = selected_rows_to_list(selection)
+					return selection_list
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -408,6 +404,8 @@ def selected_rows_to_list(all_rows):
 
 	result_list = []
 	for count, row in enumerate(all_rows):
+		
+		print row
 		result_list.append((count+1, )+ row)
 	if result_list:
 		return result_list

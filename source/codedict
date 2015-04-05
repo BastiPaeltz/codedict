@@ -9,8 +9,8 @@ Usage:
   codedict -c LANGUAGE PROBLEM
   codedict -f LANGUAGE PATH-TO-FILE [--code PROBLEM] 
   codedict -a
-  codedict -l URL LINK_NAME 
-  codedict -l --display LINK_NAME [LANGUAGE] [PROBLEM]
+  codedict -l URL [LINK_NAME] 
+  codedict -l --display LINK_NAME [LANGUAGE] [--hline --cut]
   codedict -l --open LINK_NAME 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
@@ -25,7 +25,7 @@ Options:
   -c          Display and add/edit code to codedict.
   -f          Load content from file into codedict.
   -l          Open, display or add links.
-   
+
   -e          Displays every codedict value. 
 
   --editor      Sets your editor to the specified value. This has to be an executable.
@@ -33,7 +33,7 @@ Options:
                 Should match your console's line length. Default value: 80
   --suffix      Sets the suffix for the specified language to the given value. 
                 This is convenient for syntax highlighting inside editors.  
-  --cut         Cutting search phrase from the output's 'problem' field. 
+  --cut         Cutting search phrase from the output's 'problem' or 'link name' field. 
   --hline       Prints a horizontal line between each row of the output table. 
   --wait        This is needed on certain editors. See the troubleshooting section on GitHub.  
   --code        Content of file will be set as 'code' value of the given problem. 

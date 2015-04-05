@@ -13,10 +13,8 @@ import subprocess
 import textwrap
 import sys
 import os
-import time
 import urlparse
 import webbrowser
-
 
 ###GENERAL ###
 
@@ -29,6 +27,7 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
+	print relevant_args
 	if '--editor' in relevant_args:
 		set_editor(relevant_args['editor'])
 
@@ -43,7 +42,8 @@ def start_process(cmd_line_args):
 		set_wait_option(relevant_args)
 
 	else:
-		determine_proceeding(relevant_args)
+		body, flags = split_arguments(relevant_args)
+		determine_proceeding(body, flags)
 
 
 def set_wait_option(option):
@@ -111,12 +111,11 @@ def split_arguments(arguments):
 	return (request, flags)
 
 
-def determine_proceeding(relevant_args):
+def determine_proceeding(body, flags):
 	""" Checks which operation (add, display, ...)
 		needs to be handled. 
 	"""
 
-	body, flags = split_arguments(relevant_args)
 
 	if '-f' in flags:
 		process_file_adding(body, flags)
@@ -373,33 +372,27 @@ def process_links(body, flags):
 	"""
 	# add links
 	if not '--open' in flags and not '--display' in flags:
-		url = unicode(raw_input("Enter url for your link").strip(), 'utf-8')	
 
-		link_name = unicode(raw_input("Enter name for your link").strip(), 'utf-8')	
-
-		
-		if not link_name:
+		if not 'link_name' in body:
 			# set name based on url scheme 
 			try:
-				entire_url = urlparse.urlsplit(url)
+				entire_url = urlparse.urlsplit(body['url'])
 			except Error as e: # can this actually happen?
 				print "This is not a valid url. \n", e
 				sys.exit(1)
-
 			for url_part in reversed(entire_url):
 				if url_part:
 					subpart = url_part.split("/")
-			        link_name = subpart[len(subpart)-1].replace('.html', '')
-			        break
-		body['link_name'] = link_name
+					link_name = subpart[len(subpart)-1].replace('.html', '')
+					break
+			body['link_name'] = link_name
 		database = db.Database()
 		database.upsert_links(body)
 	
 	# display links	
 	elif '--display' in flags:
-		database = db.Database()
-		database.retrieve_link(body, 'display')
-	
+		determine_display_operation(body, flags)
+
 	# open link
 	else:
 		database = db.Database()
@@ -409,8 +402,20 @@ def process_links(body, flags):
 		else:
 			print "No links found."
 			sys.exit(0)
+		if not requested_url.startswith('http'):
+			requested_url = 'http://'+requested_url
+		run_webbrowser(requested_url)
+
+def run_webbrowser(url):
+	"""Runs the url in the webbrowser.
+
+	"""
 	
-		webbrowser.open_new(requested_url)
+	print "Opening your browser"
+	os.close(2)
+	os.close(1)
+	os.open(os.devnull, os.O_RDWR)
+	webbrowser.get().open(url)
 
 def process_add_content(body, flags):
 	"""Processes content adding. 
@@ -482,9 +487,11 @@ def determine_display_operation(body, flags):
 
 	
 	if '--cut' in flags and 'problem' in body:
-		cut_usecase = body['problem']
+		cut_search = body['problem']
+	elif '--cut' in flags and 'link_name' in body:
+		cut_search = body['link_name']
 	else:
-		cut_usecase = False
+		cut_search = False
 
 	if '--hline' in flags:
 		hline = True 
@@ -501,30 +508,48 @@ def determine_display_operation(body, flags):
 	
 	elif not 'problem' in body:
 		results = database.retrieve_content(body, "language")
-		column_list = ["index", "problem", "solution", "code added?"]			
+		column_list = ["index", "problem", "solution", "code added?"]
 
+	elif '-l' in flags:
+		if not 'language' in body:
+			results = database.retrieve_links(body, 'display')
+			column_list = ["index", "link name", "url", "description"]
+		else:
+			results = database.retrieve_links(body, 'lang-display')			
+			column_list = ["index", "link name", "url", "description", 'language']
 	else:
 		results = database.retrieve_content(body, "basic")
 		column_list = ["index", "problem", "solution", "code added?"]
 	
 
 	if results:
-		console_linelength = database.get_config_item('linelength')
-		if not console_linelength:
-			console_linelength = 80
-		else:
-			console_linelength = int(console_linelength[0])
 
-		updated_results, table = build_table(column_list, results, cut_usecase, hline, console_linelength)
+		console_linelength = set_console_length(database) 
+
+		updated_results, table = build_table(column_list, results, cut_search, hline, console_linelength)
 		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
-	
-		process_follow_up_operation(body, updated_results, database, 'display', tmpfile)
+		
+		state = State_Before_Follow_Up(database, body, updated_results)
+		state.process_follow_up_operation(body, flags, updated_results, database, 'link', tmpfile)
 
 	else:
 		print "No results."
 		
 
-def build_table(column_list, all_rows, cut_usecase, hline, line_length):
+def set_console_length(database):
+	"""Gets console length from DB and sets it appropiately.
+
+	"""
+
+	console_linelength = database.get_config_item('linelength')
+	if not console_linelength:
+		console_linelength = 80
+	else:
+		console_linelength = int(console_linelength[0])
+	return console_linelength
+
+
+def build_table(column_list, all_rows, cut_search, hline, line_length):
 	"""Builds table and prints it to console.
 
 	"""
@@ -543,8 +568,8 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
 		for index in range(1, cl_length): 	# code and index dont need to be filled
-			if cut_usecase and index == 1:
-				single_row[index] = single_row[index].replace(cut_usecase, "", 1) 
+			if cut_search and index == 1:
+				single_row[index] = single_row[index].replace(cut_search, "", 1) 
 			if not single_row[index]:
 				single_row[index] = ""
 
@@ -565,88 +590,115 @@ def build_table(column_list, all_rows, cut_usecase, hline, line_length):
 
 ###FOLLOW UP ###
 
-def prompt_by_index(results, prompt, default_attribute, tmpfile=False,):
-	"""Prompts the user for further commands after displaying content or links.
+class State_Before_Follow_Up(object):
+	"""State (table, query results, database etc.) after the initial 'query' gets saved.
+	    Used for displaying operations only.
+
 	"""
 
-	valid_input = False 
-	while not valid_input:
+	def __init__(self, database, body, flags, query_result):
+		self._database = database
+		self._results = query_result
+		self._original_body = body
+		self._original_flags = flags
 
-		# clean up of previously created tempfile
-		user_input = raw_input(prompt).strip().split(None, 1)
-		
-		if tmpfile:
+	def _prompt_by_index(self, prompt, default_attribute, tmpfile=False):
+		"Prompts the user for further commands after displaying content or links."
+
+
+		valid_input = False 
+		while not valid_input:
+
+			# clean up of previously created tempfile
+			user_input = raw_input(prompt).strip().split(None, 1)
+			
+			if tmpfile:
+				try:
+					os.remove(tmpfile.name)
+					tmpfile = False
+				except OSError as error:
+					print error 
+					print "This error is not crucial for the program itself."
+
+			# abort with 'enter' 		
+			if not user_input:
+				sys.exit(0)
+			index = user_input[0]
 			try:
-				os.remove(tmpfile.name)
-				tmpfile = False
-			except OSError as error:
-				print error 
-				print "This error is not crucial for the program itself."
-
-		# abort with 'enter' 		
-		if not user_input:
-			sys.exit(0)
-		index = user_input[0]
-		try:
-			attribute = user_input[1].lower()
-		except IndexError:
-			attribute = default_attribute
+				attribute = user_input[1].lower()
+			except IndexError:
+				attribute = default_attribute
 
 
-		if len(user_input) <= 2 and index.isdigit() and int(index) >= 1 and int(index) <= len(results):	
+			if (len(user_input) <= 2 and index.isdigit() 
+									and int(index) >= 1 
+									and int(index) <= len(self._results)):	
 
-			actual_index = int(index)-1
-			if attribute and attribute in ('problem', 'solution', 'comment', 'code', 'bind', 'del'):
-				valid_input = True
+				actual_index = int(index)-1
+				if attribute and attribute in ('problem', 'solution', 'comment', 'link', 'code', 'bind', 'del'):
+					valid_input = True
+				else:
+					print "Wrong attribute, Please try again."
+					valid_input = False
 			else:
-				print "Wrong attribute, Please try again."
-				valid_input = False
+				print "Wrong index, Please try again."
+		return (self._results[actual_index], attribute) 		
+
+
+	def _process_follow_up_operation(self, operation_type, tmpfile):
+		"""Processes the 2nd operation of the user, e.g. code adding.
+
+		"""
+
+		# link table
+		if operation_type == 'link':
+			prompt = "Do you want to do more? Valid input: INDEX [('DEL' | 'BIND')] - Press ENTER to abort: \n"
+			target, attribute = self._prompt_by_index(prompt, 'link', tmpfile)
+			self._link_determine_operation(target, attribute)
+
+		# dict table
 		else:
-			print "Wrong index, Please try again."
-	return (results[actual_index], attribute) 		
-
-def process_follow_up_operation(original_body, results, database, operation_type, tmpfile):
-	"""Processes the 2nd operation of the user, e.g. code adding.
-
-	"""
-
-	# link table
-	if operation_type == 'link':
-		prompt = "Do you want to do more? Valid input: INDEX [('DEL' | 'BIND')] - Press ENTER to abort: \n"
-		target, attribute = prompt_by_index(results, prompt, 'link', tmpfile)
-		link_determine_operation(target, attribute, original_body, database)
-
-	# dict table
-	else:
-		prompt = "Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n"
-		target, attribute = prompt_by_index(results, prompt, 'code', tmpfile)
-	
-		original_body['problem'] = target[1]
+			prompt = "Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n"
+			target, attribute = self._prompt_by_index(prompt, 'code', tmpfile)
 		
-		if attribute != 'code':
-			original_body['attribute'] = attribute
-			return update_content(original_body, database=database) 
-		else:
-			code_of_target = target[len(target)-1]
-			if not code_of_target:
-				code_of_target = " "
-			return process_code_adding(original_body, code_of_target=code_of_target, database=database)
+			self._original_body['problem'] = target[1]
+			
+			if attribute != 'code':
+				self._original_body['attribute'] = attribute
+				return update_content(self._original_body, database=self._database) 
+			else:
+				code_of_target = target[len(target)-1]
+				if not code_of_target:
+					code_of_target = " "
+				return process_code_adding(self._original_body, code_of_target=code_of_target, database=self._database)
 
-def link_determine_operation(index, attribute, original_body, database):
-	"""Determines what operation to do on link table
 
-	"""
+	def _link_determine_operation(self, index, attribute):
+		"""Determines what operation to do on link table
 
-	if not attribute:
-		link_url = database.retrieve_link(index, original_body)
-		webbrowser.open_new(link_url)
+		"""
 
-	elif attribute == 'del':
-		database.delete_link(original_body, index)
-		print "Deleting link {0} successfully.".format(index[1])
+		if attribute == 'link':
+			self._original_body['link_name'] = index[1]
+			link_url = self._database.retrieve_link(self._original_body, 'open')
+			print link_url
+			if link_url:
+				requested_url = link_url[0]
+				if not requested_url.startswith('http'):
+					requested_url = "http://"+requested_url
 
-	elif attribute == 'bind':
-		input_lang = raw_input("Bind" +index[1]+" to language : ").strip()
-		input_problem = raw_input("Bind" +index[1]+" to problem : ").strip()
-		database.upsert_links(index, original_body, input_lang, input_problem)
-		print "Binding link {0} successfull."
+				run_webbrowser(requested_url)
+			else:
+				print "No links."
+				sys.exit(0)
+
+		elif attribute == 'del':
+			self._original_body['url'] = index[1] 
+			self._database.delete_links(self._original_body)
+			print "Deleting link {0} successfully.".format(index[1])
+
+		elif attribute == 'bind':
+			self._original_body['input_lang'] = raw_input("Bind" +index[1]+" to language : ").strip()
+			self._original_body['link_name'] = index[1]
+			self._database.upsert_links(self._original_body, operation_type='upsert')
+			print "Binding link {0} successfull."
