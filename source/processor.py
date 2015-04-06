@@ -388,6 +388,7 @@ def process_links(body, flags):
 			body['link_name'] = link_name
 		database = db.Database()
 		database.upsert_links(body)
+		print "Added link to database."
 	
 	# display links	
 	elif '--display' in flags:
@@ -396,7 +397,7 @@ def process_links(body, flags):
 	# open link
 	else:
 		database = db.Database()
-		db_result = database.retrieve_link(body, 'open')
+		db_result = database.retrieve_links(body, 'open')
 		if db_result[0]:
 			requested_url = db_result[0]
 		else:
@@ -479,6 +480,27 @@ def insert_content():
 
 ### DISPLAYING ###
  
+def build_args_dict(body, flags):
+	"""Determines and sets hline and cutsearch as well as links"""
+
+	args_dict = {}	
+	if '--cut' in flags and 'problem' in body:
+		args_dict['cut_search'] = body['problem']
+	elif '--cut' in flags and 'link_name' in body:
+		args_dict['cut_search'] = body['link_name']
+	else:
+		args_dict['cut_search'] = False
+
+	if '--hline' in flags:
+		args_dict['hline'] = True 
+	else:
+		args_dict['hline'] = False
+
+	if '-l' in flags:
+		args_dict['link'] = True
+
+	return args_dict
+
 
 def determine_display_operation(body, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
@@ -486,21 +508,28 @@ def determine_display_operation(body, flags):
 	"""
 
 	
-	if '--cut' in flags and 'problem' in body:
-		cut_search = body['problem']
-	elif '--cut' in flags and 'link_name' in body:
-		cut_search = body['link_name']
-	else:
-		cut_search = False
-
-	if '--hline' in flags:
-		hline = True 
-	else:
-		hline = False
+	args_dict = determine_hline_and_cutsearch(body, flags)
 
 	database = db.Database()
 
-	if '-e' in flags:
+	display_type = "display"
+
+	if '-l' in flags:
+		display_type = "link"
+
+		if '-e' in flags:
+			results = database.retrieve_links(body, 'entire-display')			
+			column_list = ["index", "link name", "url", "language", 'description']
+
+		elif not 'language' in body:
+			results = database.retrieve_links(body, 'display')
+			column_list = ["index", "link name", "url"]
+		
+		else:
+			results = database.retrieve_links(body, 'lang-display')			
+			column_list = ["index", "link name", "url", "language"]
+
+	elif '-e' in flags:
 		if not 'problem' in body:
 			body['problem'] = ""
 		results = database.retrieve_content(body, "full")
@@ -509,14 +538,7 @@ def determine_display_operation(body, flags):
 	elif not 'problem' in body:
 		results = database.retrieve_content(body, "language")
 		column_list = ["index", "problem", "solution", "code added?"]
-
-	elif '-l' in flags:
-		if not 'language' in body:
-			results = database.retrieve_links(body, 'display')
-			column_list = ["index", "link name", "url", "description"]
-		else:
-			results = database.retrieve_links(body, 'lang-display')			
-			column_list = ["index", "link name", "url", "description", 'language']
+	
 	else:
 		results = database.retrieve_content(body, "basic")
 		column_list = ["index", "problem", "solution", "code added?"]
@@ -526,12 +548,12 @@ def determine_display_operation(body, flags):
 
 		console_linelength = set_console_length(database) 
 
-		updated_results, table = build_table(column_list, results, cut_search, hline, console_linelength)
+		updated_results, table = build_table(column_list, results, console_linelength, args_dict)
 		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
 		
-		state = State_Before_Follow_Up(database, body, updated_results)
-		state.process_follow_up_operation(body, flags, updated_results, database, 'link', tmpfile)
-
+		state = State_Before_Follow_Up(database, body, flags, updated_results)
+		state.process_follow_up_operation(display_type, tmpfile)
+		state.perform_riginal_request(body, flags)
 	else:
 		print "No results."
 		
@@ -549,7 +571,7 @@ def set_console_length(database):
 	return console_linelength
 
 
-def build_table(column_list, all_rows, cut_search, hline, line_length):
+def build_table(column_list, all_rows, line_length, args_dict):
 	"""Builds table and prints it to console.
 
 	"""
@@ -558,7 +580,7 @@ def build_table(column_list, all_rows, cut_search, hline, line_length):
 	cl_length = len(column_list)-1
 	
 	result_table = prettytable.PrettyTable(column_list)
-	if hline:
+	if 'hline' in args_dict:
 		result_table.hrules = prettytable.ALL 
 
 	all_rows_as_list = []
@@ -568,8 +590,8 @@ def build_table(column_list, all_rows, cut_search, hline, line_length):
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
 		for index in range(1, cl_length): 	# code and index dont need to be filled
-			if cut_search and index == 1:
-				single_row[index] = single_row[index].replace(cut_search, "", 1) 
+			if 'cut_search' in args_dict and index == 1:
+				single_row[index] = single_row[index].replace(args_dict['cut_search'], "", 1) 
 			if not single_row[index]:
 				single_row[index] = ""
 
@@ -577,7 +599,7 @@ def build_table(column_list, all_rows, cut_search, hline, line_length):
 			single_row[index] = textwrap.fill(dedented_item, width=field_length)	
 
 		#if code is present, print "yes", else "no"	
-		if single_row[cl_length]:
+		if 'links' in args_dict and single_row[cl_length]:
 			single_row[cl_length] = "yes"
 		else:
 			single_row[cl_length] = "no" 
@@ -645,7 +667,14 @@ class State_Before_Follow_Up(object):
 		return (self._results[actual_index], attribute) 		
 
 
-	def _process_follow_up_operation(self, operation_type, tmpfile):
+	def perform_original_request(self, body, flags):
+		"""Performs original request again.
+
+		"""
+
+		return determine_proceeding(body, flags)
+
+	def process_follow_up_operation(self, operation_type, tmpfile):
 		"""Processes the 2nd operation of the user, e.g. code adding.
 
 		"""
@@ -673,13 +702,13 @@ class State_Before_Follow_Up(object):
 				return process_code_adding(self._original_body, code_of_target=code_of_target, database=self._database)
 
 
-	def _link_determine_operation(self, index, attribute):
+	def _link_determine_operation(self, target, attribute):
 		"""Determines what operation to do on link table
 
 		"""
 
 		if attribute == 'link':
-			self._original_body['link_name'] = index[1]
+			self._original_body['link_name'] = target[1]
 			link_url = self._database.retrieve_link(self._original_body, 'open')
 			print link_url
 			if link_url:
@@ -693,12 +722,13 @@ class State_Before_Follow_Up(object):
 				sys.exit(0)
 
 		elif attribute == 'del':
-			self._original_body['url'] = index[1] 
+			self._original_body['url'] = target[2] 
 			self._database.delete_links(self._original_body)
-			print "Deleting link {0} successfully.".format(index[1])
+			print "Deleting link {0} successfully.".format(target[1])
 
 		elif attribute == 'bind':
-			self._original_body['input_lang'] = raw_input("Bind" +index[1]+" to language : ").strip()
-			self._original_body['link_name'] = index[1]
+			self._original_body['language'] = raw_input("Bind " +target[1]+" to language : ").strip()
+			self._original_body['link_name'] = target[1]
+			self._original_body['url'] = target[2]
 			self._database.upsert_links(self._original_body, operation_type='upsert')
-			print "Binding link {0} successfull."
+			print "Binding link {0} successfull.".format(self._original_body['link_name'])

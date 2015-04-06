@@ -10,11 +10,10 @@ Usage:
   codedict -f LANGUAGE PATH-TO-FILE [--code PROBLEM] 
   codedict -a
   codedict -l URL [LINK_NAME] 
-  codedict -l --display LINK_NAME [LANGUAGE] [--hline --cut]
+  codedict -l --display LINK_NAME [LANGUAGE] [-e --cut --hline]
   codedict -l --open LINK_NAME 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
-  codedict --browser BROWSER
   codedict --wait (off | on)
   codedict --line INTEGER
 

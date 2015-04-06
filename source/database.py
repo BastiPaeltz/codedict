@@ -36,7 +36,7 @@ class Database(object):
 
  
 	def _create_tables(self):
-		"""Creates tables 'dictionary', 'languages' and 'config' if they not exist.
+		"""Creates tables 'dictionary', 'languages', 'links' and 'config' if they not exist.
 
 		"""
 
@@ -59,7 +59,7 @@ class Database(object):
 				''')
 
 				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
+					CREATE table IF NOT EXISTS Links (name TEXT PRIMARY KEY, 
 					URL text, description TEXT, language TEXT)
 				''')
 
@@ -202,14 +202,14 @@ class Database(object):
 
 				#add link to Links db if not exists
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Links (name, url) VALUES (?, ?)
-				''', (values['link_name'], values['url']))
+				INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
+				''', (values['link_name'], values['url'], values['language']))
 				
 				if operation_type == 'upsert':
 				
 					self._db_instance.execute('''
-					UPDATE Links SET language = (SELECT language from Languages where language = ?) AND WHERE link_name = ?
-					''', (values['language'], values['link_name']))
+					UPDATE Links SET language = ? WHERE name = ? AND url = ?
+					''', (values['language'], values['link_name'], values['url']))
 				
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -223,11 +223,10 @@ class Database(object):
 
 		try:
 			with self._db_instance:
-				
+				print values	
 				self._db_instance.execute('''
-			    	DELETE from Links WHERE url = ? AND language = 
-			    	(SELECT language from Languages where language = ?)
-			    ''', (values['url'], values['language']))
+			    	DELETE from Links WHERE url = ? 
+			    ''', (values['url'], ))
 			    
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -248,16 +247,21 @@ class Database(object):
 					return selection.fetchone()
 
 				else: # display 
-					print values
 					if selection_type == 'display':
 						selection = self._db_instance.execute('''
-						SELECT url, name, description from Links WHERE name LIKE ?
+						SELECT name, url from Links WHERE name LIKE ?
 						''', (values['link_name']+'%', )) 
 
-					else: # lang display
+					elif selection_type == 'lang_display': # lang display
 						selection = self._db_instance.execute('''
-						SELECT url, name, description, language from Links WHERE name LIKE ?
-						AND language = (SELECT language from Languages where language = ?)
+						SELECT name, url, language from Links WHERE name LIKE ?
+						AND language = ? 
+						''', (values['link_name']+'%', values['language']))
+						 
+					else: # entire display
+						selection = self._db_instance.execute('''
+						SELECT name, url, language, description from Links WHERE name LIKE ?
+						AND language = ? 
 						''', (values['link_name']+'%', values['language'])) 
 
 					selection_list = selected_rows_to_list(selection)
