@@ -15,8 +15,9 @@ import sys
 import os
 import urlparse
 import webbrowser
-import time
-###GENERAL ###
+
+
+##GENERAL 
 
 
 def start_process(cmd_line_args):
@@ -139,7 +140,7 @@ def check_for_suffix(language, database):
 	if suffix:
 		return suffix
 	else:
-		input_suffix = raw_input("Enter file suffix for language " +language+" : ").strip()
+		input_suffix = process_and_validate_input("Enter file suffix for language " +language+" : ")
 		database.set_suffix(language, input_suffix)
 		return input_suffix
 
@@ -154,13 +155,7 @@ def check_for_editor(database):
 	editor_unicode = database.get_config_item('editor')
 
 	if not editor_unicode:
-		valid_input = False
-		while not valid_input:
-			try:
-				editor_value = unicode(raw_input("Enter your editor: ").strip(), 'utf-8')
-				valid_input = True
-			except UnicodeError as error:
-				print error
+		editor_value = process_and_validate_input("Enter your editor: ")
 		database.set_config_item('editor', editor_value)
 		editor_value = editor_value.encode('utf-8')
 	else:
@@ -207,8 +202,8 @@ def process_printing(table, database):
 	if decision == 'console':
 		print table
 	else:
-		print_to_editor(table, database) 
-
+		tmpfile = print_to_editor(table, database) 
+	return tmpfile
 
 def decide_where_to_print(table):	
 	"""Decides where to print to.
@@ -217,21 +212,21 @@ def decide_where_to_print(table):
 
 	if len(table.get_string().splitlines()) < 25: # output smaller than 25 lines
 		return 'console'
-	else:
-		valid_input = False
 
-		while not valid_input:
-			choice = raw_input(("Output longer than 25 lines - print to console anyway? (y/n) ")
-				).strip().split(" ")[0]
+	else:
+		
+		decision = ""
+		while decision == "":
+			choice = process_and_validate_input("Output longer than 25 lines - print to console anyway? (y/n)")
+
 			if choice in ('y', 'yes', 'Yes', 'Y'):
-				valid_input = True
-				return "console"
+				decision = "console"
 			elif choice in ('n', 'no', 'No', 'N'):
-				valid_input = True
-				return "editor"
+				decision = "editor"
 			else:
 				continue
-
+		
+		return decision		
 
 def code_input_from_editor(suffix, database, existing_code):
 	"""Sets up a nice input form (editor) for code adding and viewing.
@@ -267,10 +262,10 @@ def code_input_from_editor(suffix, database, existing_code):
 
 			tmpfile.close()
 
-			valid_input = False
-			while not valid_input:
-			 	if raw_input("Are you done adding code? (y/n): ") == 'y':
-			 		valid_input = True
+			go_ahead = False
+			while not go_ahead:
+			 	if process_and_validate_input("Are you done adding code? (y/n): ") == 'y':
+			 		go_ahead = True
 			 	else:
 			 		continue
 		else: 	# platform != windows
@@ -365,7 +360,7 @@ def process_file_adding(body, flags):
  	print "Finished - updated your codedict successfully."
 
 	
-## ADDING
+## LINKS
 
 def process_links(body, flags):
 	"""Processes link to codedict.
@@ -375,17 +370,18 @@ def process_links(body, flags):
 	if not '--open' in flags and not '--display' in flags:
 		if not 'link_name' in body:
 			# set name based on url scheme 
-			try:
-				entire_url = urlparse.urlsplit(body['url'])
-			except Error as error: # can this actually happen? - no error specified in documentation
-				print "This is not a valid url. \n", error
-				sys.exit(1)
+				
+			entire_url = urlparse.urlsplit(body['url'])
+
 			for url_part in reversed(entire_url):
 				if url_part:
 					subpart = url_part.split("/")
 					link_name = subpart[len(subpart)-1].replace('.html', '')
 					break
-			body['link_name'] = link_name
+			if not entire_url.scheme:
+				body['link_name'] = "https://"+link_name
+			else:
+				body['link_name'] = link_name
 		if not 'language' in body:
 			body['language'] = ""
  		database = db.Database()
@@ -421,17 +417,7 @@ def run_webbrowser(url):
 	os.open(os.devnull, os.O_RDWR)
 	webbrowser.get().open(url)
 
-def process_add_content(body, flags):
-	"""Processes content adding. 
-
-	"""
-
-	# TODO : deprecated
-	if '-I' in flags or '-i' in flags:
-		update_content(body)
-	else:
-		insert_content()
-
+## ADDING
 
 def update_content(body, database=False):
 	"""Processes how to update content.
@@ -441,13 +427,9 @@ def update_content(body, database=False):
 		database = db.Database()
 
 	if body['attribute'] != 'del': 
-		valid_input = False
-		while not valid_input:
-			try:
-				body['data'] = unicode(raw_input("Change "+body['attribute']+" to: ").strip(), 'utf-8')
-				valid_input = True
-			except UnicodeError as error:
-				print error
+		
+		body['data'] = process_and_validate_input("Change "+body['attribute']+" to: ")
+				
 		database.update_content(body)		
 	else:
 		database.delete_content(body)
@@ -459,54 +441,21 @@ def insert_content():
 	"""
 
 	content_to_add = {}
+	
+	# get valid input 
+	
+	language = process_and_validate_input("Enter language: ")
 
-	valid_input = False
-
-	# TODO : add general input function, test db overhead, 
-	# get valid lang input 
-	while not valid_input:
-		try:
-			language = unicode(raw_input("Enter language: ").strip(), 'utf-8')
-			valid_input = True
-		except UnicodeError as error:
-			print error
-	# get valid input for remaining fields		
 	for index, item in enumerate(('problem: ', 'solution: ', 'comment: ')):
-		valid_input = False
-		while not valid_input:
-			try: 
-				content_to_add[index] = unicode(raw_input("Enter "+ item).strip(), 'utf-8') 
-				valid_input = True
-			except UnicodeError as error:
-				print error
-
+		content_to_add[index] = process_and_validate_input("Enter " + item) 
+				
 	database = db.Database()
 	database.add_content([content_to_add], language) # db method works best with lists
 	print "Finished - updated your codedict successfully."
 
 
-### DISPLAYING ###
+### DISPLAYING functions ###
  
-def build_args_dict(body, flags):
-	"""Determines and sets hline and cutsearch as well as links based 
-	if they are present in flags / body. --> Is needed for building table.
-	"""
-
-	args_dict = {}	
-	if '--cut' in flags and 'problem' in body:
-		args_dict['cut_search'] = body['problem']
-	elif '--cut' in flags and 'link_name' in body:
-		args_dict['cut_search'] = body['link_name']
-
-	if '--hline' in flags:
-		args_dict['hline'] = True 
-
-	if '-l' in flags:
-		args_dict['link'] = True
-
-	return args_dict
-
-
 def determine_display_operation(body, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
 
@@ -614,14 +563,14 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 
 ###FOLLOW UP ###
-
+    
 class State(object):
 	"""State (table, query results, database etc.) after the initial 'query' gets saved.
 	    Used for 'displaying' operations only.
 
 	"""
 
-	def __init__(self, database, body, flags, query_result):
+    	def __init__(self, database, body, flags, query_result):
 		self._database = database
 		self._results = query_result
 		self._original_body = body
@@ -635,7 +584,7 @@ class State(object):
 		while not valid_input:
 
 			# clean up of previously created tempfile
-			user_input = raw_input(prompt).strip().split(None, 1)
+			user_input = process_and_validate_input(prompt).split(None, 1)
 			
 			if tmpfile:
 				try:
@@ -643,7 +592,7 @@ class State(object):
 					tmpfile = False
 				except OSError as error:
 					print error 
-					print "This error is not crucial for the program itself."
+					print "This error is not crucial for the program itself - will continue."
 
 			# abort with 'enter' 		
 			if not user_input:
@@ -656,8 +605,7 @@ class State(object):
 
 
 			if (len(user_input) <= 2 and index.isdigit() 
-									and int(index) >= 1 
-									and int(index) <= len(self._results)):	
+			and int(index) >= 1 and int(index) <= len(self._results)):	
 
 				actual_index = int(index)-1
 				if attribute and attribute in ('problem', 'solution', 'comment', 'link', 'code', 'bind', 'del'):
@@ -702,7 +650,8 @@ class State(object):
 				code_of_target = target[len(target)-1]
 				if not code_of_target:
 					code_of_target = " "
-				return process_code_adding(self._original_body, code_of_target=code_of_target, database=self._database)
+				return process_code_adding(self._original_body, 
+				code_of_target=code_of_target, database=self._database)
 
 
 	def _link_determine_operation(self, target, attribute):
@@ -710,6 +659,7 @@ class State(object):
 
 		"""
 
+		# default - run link in webbrowser
 		if attribute == 'link':
 			self._original_body['link_name'] = target[1]
 			link_url = self._database.retrieve_link(self._original_body, 'open')
@@ -728,9 +678,52 @@ class State(object):
 			self._database.delete_links(self._original_body)
 			print "Deleting link {0} successfully.".format(target[1])
 
+		# bind language to link
 		elif attribute == 'bind':
-			self._original_body['language'] = raw_input("Bind " +target[1]+" to language : ").strip()
+			self._original_body['language'] = process_and_validate_input("Bind "+target[1]+" to language : ")
 			self._original_body['link_name'] = target[1]
 			self._original_body['url'] = target[2]
 			self._database.upsert_links(self._original_body, operation_type='upsert')
 			print "Binding link {0} successfull.".format(self._original_body['link_name'])
+
+		# set description for link
+		else: 
+			self._original_body['description'] = (process_and_validate_input("Add description for"+
+			self._original_body['link_name']))
+
+
+## HELPER
+
+def process_and_validate_input(prompt):
+    """ Processes trivial input and validates it. Returns the user's input.
+
+    """
+
+    valid_input = False
+    while not valid_input:
+        try:
+            user_input = unicode(raw_input(prompt).strip(), 'utf-8')
+            valid_input = True
+        except UnicodeError as error:
+            print error
+    return user_input 
+
+
+def build_args_dict(body, flags):
+	"""Determines and sets hline and cutsearch as well as links based 
+	if they are present in flags / body. --> Is needed for building table.
+	"""
+
+	args_dict = {}	
+	if '--cut' in flags and 'problem' in body:
+		args_dict['cut_search'] = body['problem']
+	elif '--cut' in flags and 'link_name' in body:
+		args_dict['cut_search'] = body['link_name']
+
+	if '--hline' in flags:
+		args_dict['hline'] = True 
+
+	if '-l' in flags:
+		args_dict['link'] = True
+
+	return args_dict

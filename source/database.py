@@ -7,7 +7,6 @@
 import sqlite3
 import sys
 import os
-import time
 
 
 class Database(object):
@@ -197,18 +196,20 @@ class Database(object):
 		"""
 
 		try:
-			with self._db_instance:
+#			with self._db_instance:
 
 				#add link to Links db if not exists
+			self._db_instance.execute('''
+			INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
+			''', (values['link_name'], values['url'], values['language']))
+			
+			if operation_type == 'upsert':
+			
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
-				''', (values['link_name'], values['url'], values['language']))
-				
-				if operation_type == 'upsert':
-				
-					self._db_instance.execute('''
-					UPDATE Links SET language = ? WHERE name = ? AND url = ?
-					''', (values['language'], values['link_name'], values['url']))
+				UPDATE Links SET language = ? WHERE name = ? AND url = ?
+				''', (values['language'], values['link_name'], values['url']))
+		#	self._db_instance.commit()
+			self._db_instance.close()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
