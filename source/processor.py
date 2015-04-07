@@ -15,7 +15,7 @@ import sys
 import os
 import urlparse
 import webbrowser
-
+import time
 ###GENERAL ###
 
 
@@ -28,16 +28,15 @@ def start_process(cmd_line_args):
 					if value is not False and value is not None})
 
 	if '--editor' in relevant_args:
-		set_editor(relevant_args['editor'])
+		set_editor(relevant_args['EDITOR'])
 
 	elif '--suffix' in relevant_args:
-		set_suffix(relevant_args['suffix'], relevant_args['language'])
+		set_suffix(relevant_args['SUFFIX'], relevant_args['LANGUAGE'])
 
 	elif '--line' in relevant_args:
-		set_line_length(relevant_args['integer'])
+		set_line_length(relevant_args['INTEGER'])
 
 	elif '--wait' in relevant_args:
-		del relevant_args['--wait']
 		set_wait_option(relevant_args)
 
 	else:
@@ -50,11 +49,11 @@ def set_wait_option(option):
 
 	"""
 
+	value = ""
 	if 'on' in option:
 		value = "on"
 		print "Enabling 'wait' option."
 	else:
-		value = ""
 		print "Disabling 'wait' option."
 
 	database = db.Database()
@@ -72,7 +71,7 @@ def set_editor(editor):
 
 
 def set_suffix(suffix, language):
-	"""Sets the suffix.
+	"""Sets the suffix for a specific language.
 
 	"""
 
@@ -121,7 +120,7 @@ def determine_proceeding(body, flags):
 	elif '-d' in flags:
 		determine_display_operation(body, flags)
 	elif '-a' in flags:
-		process_add_content(body, flags)
+		insert_content()
 	elif '-c' in flags:
 		process_code_adding(body)
 	elif '-l' in flags:
@@ -177,6 +176,7 @@ def print_to_editor(table, database):
 
 	editor_value = check_for_editor(database)
 
+	# subprocess works best with lists instead of strings
 	editor_list = [argument for argument in editor_value.split(" ")]
 
 	prewritten_data = table.get_string() # prettytable to string
@@ -206,9 +206,8 @@ def process_printing(table, database):
 	decision = decide_where_to_print(table)
 	if decision == 'console':
 		print table
-		return False
 	else:
-		return print_to_editor(table, database) 
+		print_to_editor(table, database) 
 
 
 def decide_where_to_print(table):	
@@ -216,10 +215,11 @@ def decide_where_to_print(table):
 
 	"""
 
-	if len(table.get_string().splitlines()) < 25:
+	if len(table.get_string().splitlines()) < 25: # output smaller than 25 lines
 		return 'console'
 	else:
 		valid_input = False
+
 		while not valid_input:
 			choice = raw_input(("Output longer than 25 lines - print to console anyway? (y/n) ")
 				).strip().split(" ")[0]
@@ -257,6 +257,8 @@ def code_input_from_editor(suffix, database, existing_code):
 		file_name = tmpfile.name
 
 		if sys.platform == "win32" or wait_enabled: # windows or wait enabled 
+			
+			# tmpfile is read after user is finished with editing, (tmpfile gets closed before)
 			try:
 	  			subprocess.Popen(editor_list + [tmpfile.name])
 	  		except (OSError, IOError, ValueError) as error:
@@ -267,7 +269,7 @@ def code_input_from_editor(suffix, database, existing_code):
 
 			valid_input = False
 			while not valid_input:
-			 	if raw_input("Are you done adding code? (y/n): ") != 'n':
+			 	if raw_input("Are you done adding code? (y/n): ") == 'y':
 			 		valid_input = True
 			 	else:
 			 		continue
@@ -325,11 +327,12 @@ def process_code_adding(body, database=False, code_of_target=False):
 	except UnicodeError as error:
 		print error
 
+	#determine if data needs to be written to the database
 	if body['data'] == existing_code:
 		print "Nothing changed."		
 	else:
 		body['attribute'] = "code"
-		database.upsert_code(body) 
+		database.upsert_code(body)
 
 	print "Finished - updated your codedict successfully."
 
@@ -341,7 +344,6 @@ def process_file_adding(body, flags):
 
 	"""
 
-
 	try:
 		with open(body['path-to-file']) as input_file:
 			file_text = input_file.read()
@@ -352,6 +354,7 @@ def process_file_adding(body, flags):
 
 	database = db.Database()
 
+	# if file content should be treated as code, write it to DB. Otherwise find matches with regex.
 	if '--code' in flags:
 		body['data'] = file_text
 		database.upsert_code(body)	
@@ -362,7 +365,7 @@ def process_file_adding(body, flags):
  	print "Finished - updated your codedict successfully."
 
 	
-###ADD ###
+## ADDING
 
 def process_links(body, flags):
 	"""Processes link to codedict.
@@ -370,13 +373,12 @@ def process_links(body, flags):
 	"""
 	# add links
 	if not '--open' in flags and not '--display' in flags:
-
 		if not 'link_name' in body:
 			# set name based on url scheme 
 			try:
 				entire_url = urlparse.urlsplit(body['url'])
-			except Error as e: # can this actually happen?
-				print "This is not a valid url. \n", e
+			except Error as error: # can this actually happen? - no error specified in documentation
+				print "This is not a valid url. \n", error
 				sys.exit(1)
 			for url_part in reversed(entire_url):
 				if url_part:
@@ -384,10 +386,12 @@ def process_links(body, flags):
 					link_name = subpart[len(subpart)-1].replace('.html', '')
 					break
 			body['link_name'] = link_name
-		database = db.Database()
+		if not 'language' in body:
+			body['language'] = ""
+ 		database = db.Database()
 		database.upsert_links(body)
-		print "Added link to database."
-	
+		print "Added link {0} to database.".format(body['link_name'])
+		sys.exit(0)	
 	# display links	
 	elif '--display' in flags:
 		determine_display_operation(body, flags)
@@ -411,6 +415,7 @@ def run_webbrowser(url):
 	"""
 	
 	print "Opening your browser"
+	# needed for surpressing error messages in console when opening browser
 	os.close(2)
 	os.close(1)
 	os.open(os.devnull, os.O_RDWR)
@@ -421,6 +426,7 @@ def process_add_content(body, flags):
 
 	"""
 
+	# TODO : deprecated
 	if '-I' in flags or '-i' in flags:
 		update_content(body)
 	else:
@@ -455,13 +461,16 @@ def insert_content():
 	content_to_add = {}
 
 	valid_input = False
+
+	# TODO : add general input function, test db overhead, 
+	# get valid lang input 
 	while not valid_input:
 		try:
 			language = unicode(raw_input("Enter language: ").strip(), 'utf-8')
 			valid_input = True
 		except UnicodeError as error:
 			print error
-
+	# get valid input for remaining fields		
 	for index, item in enumerate(('problem: ', 'solution: ', 'comment: ')):
 		valid_input = False
 		while not valid_input:
@@ -479,7 +488,9 @@ def insert_content():
 ### DISPLAYING ###
  
 def build_args_dict(body, flags):
-	"""Determines and sets hline and cutsearch as well as links"""
+	"""Determines and sets hline and cutsearch as well as links based 
+	if they are present in flags / body. --> Is needed for building table.
+	"""
 
 	args_dict = {}	
 	if '--cut' in flags and 'problem' in body:
@@ -501,7 +512,6 @@ def determine_display_operation(body, flags):
 
 	"""
 
-	
 	args_dict = build_args_dict(body, flags)
 
 	database = db.Database()
@@ -510,7 +520,6 @@ def determine_display_operation(body, flags):
 
 	if '-l' in flags:
 		display_type = "link"
-
 		if '-e' in flags:
 			results = database.retrieve_links(body, 'entire-display')			
 			column_list = ["index", "link name", "url", "language", 'description']
@@ -544,8 +553,8 @@ def determine_display_operation(body, flags):
 
 		updated_results, table = build_table(column_list, results, console_linelength, args_dict)
 		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
-		
-		state = State_Before_Follow_Up(database, body, flags, updated_results)
+		# TODO : handle tmpfile removal
+		state = State(database, body, flags, updated_results)
 		state.process_follow_up_operation(display_type, tmpfile)
 		state.perform_original_request(body, flags)
 	else:
@@ -553,7 +562,7 @@ def determine_display_operation(body, flags):
 		
 
 def set_console_length(database):
-	"""Gets console length from DB and sets it appropiately.
+	"""Gets console length from DB and sets it appropiately. --> convert to int
 
 	"""
 
@@ -606,9 +615,9 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 ###FOLLOW UP ###
 
-class State_Before_Follow_Up(object):
+class State(object):
 	"""State (table, query results, database etc.) after the initial 'query' gets saved.
-	    Used for displaying operations only.
+	    Used for 'displaying' operations only.
 
 	"""
 

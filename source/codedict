@@ -9,7 +9,7 @@ Usage:
   codedict -c LANGUAGE PROBLEM
   codedict -f LANGUAGE PATH-TO-FILE [--code PROBLEM] 
   codedict -a
-  codedict -l URL [LINK_NAME] 
+  codedict -l URL [LINK_NAME] [LANGUAGE] 
   codedict -l --display LINK_NAME [LANGUAGE] [-e --cut --hline]
   codedict -l --open LINK_NAME 
   codedict LANGUAGE --suffix SUFFIX
@@ -47,13 +47,15 @@ Options:
 #relative import
 from docopt import docopt 
 import processor 
+import time
 
 if __name__ == '__main__':
 
     COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.9")
-
+    start = time.time()
     try:
         processor.start_process(COMMAND_LINE_ARGS)
     except KeyboardInterrupt:
         print "\nAborted!"
-	
+    finally:
+        print "time", time.time()-start

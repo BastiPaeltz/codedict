@@ -7,7 +7,7 @@
 import sqlite3
 import sys
 import os
-
+import time
 
 
 class Database(object):
@@ -199,7 +199,6 @@ class Database(object):
 		try:
 			with self._db_instance:
 
-
 				#add link to Links db if not exists
 				self._db_instance.execute('''
 				INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
@@ -210,11 +209,9 @@ class Database(object):
 					self._db_instance.execute('''
 					UPDATE Links SET language = ? WHERE name = ? AND url = ?
 					''', (values['language'], values['link_name'], values['url']))
-				
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
-
 
 	def delete_links(self, values):
 		"""Deletes links from Link table.
