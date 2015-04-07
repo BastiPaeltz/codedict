@@ -27,7 +27,6 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
-	print relevant_args
 	if '--editor' in relevant_args:
 		set_editor(relevant_args['editor'])
 
@@ -359,7 +358,6 @@ def process_file_adding(body, flags):
 	else:
 		all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|', 
 		file_text, re.UNICODE))
-		print all_matches
 		database.add_content(all_matches, body['language'])
  	print "Finished - updated your codedict successfully."
 
@@ -488,13 +486,9 @@ def build_args_dict(body, flags):
 		args_dict['cut_search'] = body['problem']
 	elif '--cut' in flags and 'link_name' in body:
 		args_dict['cut_search'] = body['link_name']
-	else:
-		args_dict['cut_search'] = False
 
 	if '--hline' in flags:
 		args_dict['hline'] = True 
-	else:
-		args_dict['hline'] = False
 
 	if '-l' in flags:
 		args_dict['link'] = True
@@ -508,7 +502,7 @@ def determine_display_operation(body, flags):
 	"""
 
 	
-	args_dict = determine_hline_and_cutsearch(body, flags)
+	args_dict = build_args_dict(body, flags)
 
 	database = db.Database()
 
@@ -553,7 +547,7 @@ def determine_display_operation(body, flags):
 		
 		state = State_Before_Follow_Up(database, body, flags, updated_results)
 		state.process_follow_up_operation(display_type, tmpfile)
-		state.perform_riginal_request(body, flags)
+		state.perform_original_request(body, flags)
 	else:
 		print "No results."
 		
@@ -599,7 +593,7 @@ def build_table(column_list, all_rows, line_length, args_dict):
 			single_row[index] = textwrap.fill(dedented_item, width=field_length)	
 
 		#if code is present, print "yes", else "no"	
-		if 'links' in args_dict and single_row[cl_length]:
+		if not 'links' in args_dict and single_row[cl_length]:
 			single_row[cl_length] = "yes"
 		else:
 			single_row[cl_length] = "no" 
@@ -671,7 +665,7 @@ class State_Before_Follow_Up(object):
 		"""Performs original request again.
 
 		"""
-
+		print ""
 		return determine_proceeding(body, flags)
 
 	def process_follow_up_operation(self, operation_type, tmpfile):
@@ -710,7 +704,6 @@ class State_Before_Follow_Up(object):
 		if attribute == 'link':
 			self._original_body['link_name'] = target[1]
 			link_url = self._database.retrieve_link(self._original_body, 'open')
-			print link_url
 			if link_url:
 				requested_url = link_url[0]
 				if not requested_url.startswith('http'):

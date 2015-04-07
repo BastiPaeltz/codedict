@@ -257,7 +257,7 @@ class Database(object):
 						SELECT name, url, language from Links WHERE name LIKE ?
 						AND language = ? 
 						''', (values['link_name']+'%', values['language']))
-						 
+
 					else: # entire display
 						selection = self._db_instance.execute('''
 						SELECT name, url, language, description from Links WHERE name LIKE ?
@@ -408,8 +408,6 @@ def selected_rows_to_list(all_rows):
 
 	result_list = []
 	for count, row in enumerate(all_rows):
-		
-		print row
 		result_list.append((count+1, )+ row)
 	if result_list:
 		return result_list

@@ -21,7 +21,7 @@ Options:
 
   -d          Displays content from codedict.
   -a          Adds content to codedict.
-  -c          Display and add/edit code to codedict.
+  -c          Display and edit/add code to codedict.
   -f          Load content from file into codedict.
   -l          Open, display or add links.
 
