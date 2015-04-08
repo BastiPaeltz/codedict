@@ -43,18 +43,18 @@ class Database(object):
 			with self._db_instance:
 				# create tables
 				self._db_instance.execute('''
-			    	CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
-			    		language TEXT, suffix TEXT)
+					CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
+						language TEXT, suffix TEXT)
 				''')
 
 				self._db_instance.execute('''
-			    	CREATE table IF NOT EXISTS Dictionary 
-			    	(id INTEGER PRIMARY KEY, languageID INTEGER, 
-			    		problem TEXT, solution TEXT, comment TEXT, linkID INTEGER, code TEXT)
+					CREATE table IF NOT EXISTS Dictionary 
+					(id INTEGER PRIMARY KEY, languageID INTEGER, 
+						problem TEXT, solution TEXT, comment TEXT, linkID INTEGER, code TEXT)
 				''')
 
 				self._db_instance.execute('''
-			    	CREATE table IF NOT EXISTS Config (configItem TEXT PRIMARY KEY, value TEXT)
+					CREATE table IF NOT EXISTS Config (configItem TEXT PRIMARY KEY, value TEXT)
 				''')
 
 				self._db_instance.execute('''
@@ -115,7 +115,7 @@ class Database(object):
 			with self._db_instance:
 
 				suffix = self._db_instance.execute('''
-				SELECT suffix from Languages where language = ?
+					SELECT suffix from Languages where language = ?
 				''', (lang_name, ))
 
 			return suffix.fetchone()[0]
@@ -132,7 +132,7 @@ class Database(object):
 		try:
 			with self._db_instance:
 				self._db_instance.execute('''
-				UPDATE Languages SET suffix = ? WHERE language = ?
+					UPDATE Languages SET suffix = ? WHERE language = ?
 				''', (suffix, lang_name, ))
 
 		except sqlite3.Error as error:
@@ -149,10 +149,10 @@ class Database(object):
 			with self._db_instance:
 				
 				self._db_instance.execute('''
-			    	DELETE from Dictionary WHERE problem = ? AND languageID = 
-			    	(SELECT id from Languages where language = ?)
-			    ''', (values['problem'], values['language']))
-			    
+					DELETE from Dictionary WHERE problem = ? AND languageID = 
+					(SELECT id from Languages where language = ?)
+				''', (values['problem'], values['language']))
+				
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -168,20 +168,20 @@ class Database(object):
 
 				if values['attribute'] != 'link':
 					self._db_instance.execute('''
-			    	UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
-			    	(SELECT id from Languages where language = ?)
-			    	'''.format(values['attribute']), 
+						UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
+						(SELECT id from Languages where language = ?)
+					'''.format(values['attribute']), 
 					(values['data'], 
 					values['problem'],
 					values['language']))
 				else:
 					self._db_instance.execute('''
-			    	UPDATE Links SET {0} = ? WHERE problem = ? AND languageID = 
-			    	(SELECT id from Languages where language = ?)
-			    	'''.format(values['attribute']), 
-			    	(values['data'], 
-			    	values['problem'],
-			    	values['language']))
+						UPDATE Links SET {0} = ? WHERE problem = ? AND languageID = 
+						(SELECT id from Languages where language = ?)
+					'''.format(values['attribute']), 
+					(values['data'], 
+					values['problem'],
+					values['language']))
 
 
 		except sqlite3.Error as error:
@@ -200,13 +200,13 @@ class Database(object):
 
 			#add link to Links db if not exists
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
+					INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
 				''', (values['link_name'], values['url'], values['language']))
 				
 				if operation_type == 'upsert':
 				
 					self._db_instance.execute('''
-					UPDATE Links SET language = ? WHERE name = ? AND url = ?
+						UPDATE Links SET language = ? WHERE name = ? AND url = ?
 					''', (values['language'], values['link_name'], values['url']))
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -221,9 +221,9 @@ class Database(object):
 			with self._db_instance:
 				print values	
 				self._db_instance.execute('''
-			    	DELETE from Links WHERE url = ? 
-			    ''', (values['url'], ))
-			    
+					DELETE from Links WHERE url = ? 
+				''', (values['url'], ))
+				
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -238,26 +238,26 @@ class Database(object):
 				if selection_type == 'open':
 
 					selection = self._db_instance.execute('''
-					SELECT url from Links WHERE name LIKE ? 
+						SELECT url from Links WHERE name LIKE ? 
 					''', (values['link_name']+'%', )) 
 					return selection.fetchone()
 
 				else: # display 
 					if selection_type == 'display':
 						selection = self._db_instance.execute('''
-						SELECT name, url from Links WHERE name LIKE ?
+							SELECT name, url from Links WHERE name LIKE ?
 						''', (values['link_name']+'%', )) 
 
 					elif selection_type == 'lang_display': # lang display
 						selection = self._db_instance.execute('''
-						SELECT name, url, language from Links WHERE name LIKE ?
-						AND language = ? 
+							SELECT name, url, language from Links WHERE name LIKE ?
+							AND language = ? 
 						''', (values['link_name']+'%', values['language']))
 
 					else: # entire display
 						selection = self._db_instance.execute('''
-						SELECT name, url, language, description from Links WHERE name LIKE ?
-						AND language = ? 
+							SELECT name, url, language, description from Links WHERE name LIKE ?
+							AND language = ? 
 						''', (values['link_name']+'%', values['language'])) 
 
 					selection_list = selected_rows_to_list(selection)
@@ -278,7 +278,7 @@ class Database(object):
 
 				#add language to lang db if not exists
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
 				''', (values['language'], ))
 				
 				self._db_instance.execute('''
@@ -289,10 +289,10 @@ class Database(object):
 					values['language']))
 				
 				self._db_instance.execute('''
-						INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
-				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)) 
-				    		,(SELECT id from Languages where language = ?), ?, '', '', ?)
+					INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
+					VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
+					(SELECT id from Languages where language = ?)) 
+					,(SELECT id from Languages where language = ?), ?, '', '', ?)
 				''', (values['problem'],
 					values['language'], 
 					values['language'], 
@@ -314,18 +314,18 @@ class Database(object):
 				
 				#add language to lang db if not exists
 				self._db_instance.execute('''
-				INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
 				''', (lang_name, ))
 				
 				for new_row in values:
 					self._db_instance.execute('''
-				    	INSERT or REPLACE into Dictionary 
-				    	(id, languageID, problem, solution, comment, code)
-				    	VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)), 
-				    		(SELECT id from Languages where language = ?), ?, ?, ?,
-				    		COALESCE((SELECT code from Dictionary where problem = ? AND languageID = 
-				    		(SELECT id from Languages where language = ?)), ''))
+						INSERT or REPLACE into Dictionary 
+						(id, languageID, problem, solution, comment, code)
+						VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
+						(SELECT id from Languages where language = ?)), 
+						(SELECT id from Languages where language = ?), ?, ?, ?,
+						COALESCE((SELECT code from Dictionary where problem = ? AND languageID = 
+						(SELECT id from Languages where language = ?)), ''))
 					''', (new_row[0], lang_name, lang_name, new_row[0], 
 						new_row[1], new_row[2], new_row[0], lang_name))
 
@@ -362,32 +362,32 @@ class Database(object):
 				if selection_type == "basic":
 			
 					selection = self._db_instance.execute('''
-					    SELECT problem, solution, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
-					    (SELECT id from Languages where language = ?) 
-				    ''', (location['problem']+'%', location['language']))
+						SELECT problem, solution, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
+						(SELECT id from Languages where language = ?) 
+					''', (location['problem']+'%', location['language']))
 
 
 				elif selection_type == "language":
 
 					selection = self._db_instance.execute('''
-				    	SELECT problem, solution, code FROM Dictionary WHERE languageID = 
-				    	(SELECT id from Languages where language = ?) 
-				    ''', (location['language'], ))
+						SELECT problem, solution, code FROM Dictionary WHERE languageID = 
+						(SELECT id from Languages where language = ?) 
+					''', (location['language'], ))
 
 
 				elif selection_type == "code":
 
 					selection = self._db_instance.execute('''
-					    SELECT code FROM Dictionary WHERE problem = ? and languageID = 
-				    	(SELECT id from Languages where language = ?)
-					    ''', (location['problem'], location['language']))
+						SELECT code FROM Dictionary WHERE problem = ? and languageID = 
+						(SELECT id from Languages where language = ?)
+						''', (location['problem'], location['language']))
 
 
 				elif selection_type == "full":
 
 					selection = self._db_instance.execute('''
-					    SELECT problem, solution, comment, link, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
-					    (SELECT id from Languages where language = ?) 
+						SELECT problem, solution, comment, link, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
+						(SELECT id from Languages where language = ?) 
 					''', (location['problem']+'%', location['language']))
 
 				return selection

@@ -183,10 +183,10 @@ def print_to_editor(table, database):
 			tmpfile.write(prewritten_data)
 			tmpfile.flush()
 			try:
-		  		subprocess.Popen(editor_list + [tmpfile.name])
-		  	except (OSError, IOError) as error:
-		  		print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
-		  		sys.exit(1)
+				subprocess.Popen(editor_list + [tmpfile.name])
+			except (OSError, IOError) as error:
+				print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+				sys.exit(1)
 
 		except (OSError, IOError) as error:
 			print error
@@ -256,10 +256,10 @@ def code_input_from_editor(suffix, database, existing_code):
 			
 			# tmpfile is read after user is finished with editing, (tmpfile gets closed before)
 			try:
-	  			subprocess.Popen(editor_list + [tmpfile.name])
-	  		except (OSError, IOError, ValueError) as error:
-	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
-	  			sys.exit(1)
+				subprocess.Popen(editor_list + [tmpfile.name])
+			except (OSError, IOError, ValueError) as error:
+				print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+				sys.exit(1)
 
 			tmpfile.close()
 
@@ -271,12 +271,12 @@ def code_input_from_editor(suffix, database, existing_code):
 			 		continue
 		else: 	# platform != windows
 			try:
-	  			subprocess.call(editor_list + [tmpfile.name])
-	  		except (OSError, IOError) as error:
-	  			print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
-	  			sys.exit(1)
+				subprocess.call(editor_list + [tmpfile.name])
+			except (OSError, IOError) as error:
+				print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+				sys.exit(1)
 
-	  	# no matter what platform from now on
+	# no matter what platform from now on
 		return read_and_delete_tmpfile(file_name)
 
 
@@ -343,7 +343,7 @@ def process_file_adding(body, flags):
 		all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|', 
 		file_text, re.UNICODE))
 		database.add_content(all_matches, body['language'])
- 	print "Finished - updated your codedict successfully."
+	print "Finished - updated your codedict successfully."
 
 	
 ## LINKS
@@ -370,7 +370,7 @@ def process_links(body, flags):
 				body['link_name'] = link_name
 		if 'language' not in body:
 			body['language'] = ""
- 		database = db.Database()
+		database = db.Database()
 		database.upsert_links(body)
 		print "Added link {0} to database.".format(body['link_name'].encode('utf-8'))
 		sys.exit(0)	
@@ -442,7 +442,7 @@ def insert_content():
 
 
 ### DISPLAYING functions ###
- 
+
 def determine_display_operation(body, flags):
 	"""Processes display actions, checks if a nice form has to be provided or not.
 
@@ -557,7 +557,7 @@ class State(object):
 
 	"""
 
-    	def __init__(self, database, body, flags, query_result):
+	def __init__(self, database, body, flags, query_result):
 		self._database = database
 		self._results = query_result
 		self._original_body = body
@@ -682,18 +682,18 @@ class State(object):
 ## HELPER
 
 def process_and_validate_input(prompt):
-    """ Processes trivial input and validates it. Returns the user's input.
+	""" Processes trivial input and validates it. Returns the user's input.
 
-    """
+	"""
 
-    valid_input = False
-    while not valid_input:
-        try:
-            user_input = unicode(raw_input(prompt).strip(), 'utf-8')
-            valid_input = True
-        except UnicodeError as error:
-            print error
-    return user_input 
+	valid_input = False
+	while not valid_input:
+		try:
+			user_input = unicode(raw_input(prompt).strip(), 'utf-8')
+			valid_input = True
+		except UnicodeError as error:
+			print error
+	return user_input 
 
 
 def build_args_dict(body, flags):
@@ -720,8 +720,8 @@ def unicode_everything(input_dict):
 	"""Converts every value of the input_dict dict which contains strings into unicode.
  
 	"""
- 
- 	for key, value in input_dict.iteritems():
+
+	for key, value in input_dict.iteritems():
 		if type(value) is str:
 			try:
 				input_dict[key] = unicode(value, 'utf-8')
