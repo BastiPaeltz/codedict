@@ -1,0 +1,27 @@
+general language:
+
+	data types / structs:
+	%  
+	|lang data types/structures|   
+	|string, unicode, number, tuple, dictionary, list, class|    
+	|dynamically typed - variable can change type at any time.| 
+
+	language characteristics:
+	%
+	|lang character|   
+	|pragmatic, object-oriented, dynamically-typed|
+	|see PEP20 - Zen of Python| 
+
+
+common problems or use cases:
+		
+	%  
+	|common find key in dictionary |   
+	|if 'key' in dict: ... |
+	||
+
+	%  
+	|common class declaration |   
+	|class Database(object):  |
+	||
+
