@@ -356,7 +356,7 @@ def process_links(body, flags):
 	"""
 	# add links
 	if '--open' not in flags and '--display' not in flags:
-		if not 'link_name' in body:
+		if 'link_name' not in body:
 			# set name based on url scheme 
 				
 			entire_url = urlparse.urlsplit(body['url'])
