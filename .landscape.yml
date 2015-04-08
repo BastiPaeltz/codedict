@@ -1,0 +1,4 @@
+strictness: high
+ignore-paths: 
+	- source/docopt.py
+	- source/prettytable.py
