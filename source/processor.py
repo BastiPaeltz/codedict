@@ -28,6 +28,8 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
+	unicode_everything(relevant_args)
+
 	if '--editor' in relevant_args:
 		set_editor(relevant_args['EDITOR'])
 
@@ -68,7 +70,7 @@ def set_editor(editor):
 
 	database = db.Database()
 	database.set_config_item('editor', unicode(editor.strip(), 'utf-8'))
-	print "Setting editor {0} successfull.".format(editor)
+	print "Setting editor {0} successfull.".format(editor.encode('utf-8'))
 
 
 def set_suffix(suffix, language):
@@ -78,7 +80,7 @@ def set_suffix(suffix, language):
 
 	database = db.Database()	
 	database.set_suffix(language.strip(), unicode(suffix, 'utf-8'))
-	print "Setting suffix {0} for {1} successfull.".format(suffix, language)
+	print "Setting suffix {0} for {1} successfull.".format(suffix.encode('utf-8'), language.encode('utf-8'))
 
 
 def set_line_length(length):
@@ -127,8 +129,7 @@ def determine_proceeding(body, flags):
 	elif '-l' in flags:
 		process_links(body, flags)
 	else:
-		print "An unexpected error has occured while processing {0} with options {1}".format(body, flags)
-
+		print "An unexpected error has occured"
 
 def check_for_suffix(language, database):
 	"""Checks if the DB has a suffix for the requested language, if not 
@@ -386,7 +387,7 @@ def process_links(body, flags):
 			body['language'] = ""
  		database = db.Database()
 		database.upsert_links(body)
-		print "Added link {0} to database.".format(body['link_name'])
+		print "Added link {0} to database.".format(body['link_name'].encode('utf-8'))
 		sys.exit(0)	
 	# display links	
 	elif '--display' in flags:
@@ -676,7 +677,7 @@ class State(object):
 		elif attribute == 'del':
 			self._original_body['url'] = target[2] 
 			self._database.delete_links(self._original_body)
-			print "Deleting link {0} successfully.".format(target[1])
+			print "Deleting link {0} successfully.".format(target[1].encode('utf-8'))
 
 		# bind language to link
 		elif attribute == 'bind':
@@ -684,7 +685,7 @@ class State(object):
 			self._original_body['link_name'] = target[1]
 			self._original_body['url'] = target[2]
 			self._database.upsert_links(self._original_body, operation_type='upsert')
-			print "Binding link {0} successfull.".format(self._original_body['link_name'])
+			print "Binding link {0} successfull.".format(self._original_body['link_name'].encode('utf-8'))
 
 		# set description for link
 		else: 
@@ -727,3 +728,18 @@ def build_args_dict(body, flags):
 		args_dict['link'] = True
 
 	return args_dict
+
+
+def unicode_everything(input_dict):
+	"""Converts every value of the input_dict dict which contains strings into unicode.
+ 
+	"""
+ 
+ 	for key, value in input_dict.iteritems():
+		if type(value) is str:
+			try:
+				input_dict[key] = unicode(value, 'utf-8')
+			except UnicodeError as error:
+				print error
+				input_dict[key] = process_and_validate_input("Enter " + key + " again: ")
+	return input_dict
