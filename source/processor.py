@@ -277,22 +277,7 @@ def code_input_from_editor(suffix, database, existing_code):
 	  			sys.exit(1)
 
 	  	# no matter what platform from now on
-		with open(file_name) as my_file:
-			try:
-				file_output = my_file.read()
-			except (IOError, OSError) as error:
-				print error
-				sys.exit(1)
-			except:
-				print "An unexpected error has occured."
-				sys.exit(1)
-
-		try:
-			os.remove(file_name)
-		except OSError:
-			print "Couldn't delete temporary file."
-
-		return file_output
+		return read_and_delete_tmpfile(file_name)
 
 
 ###CODE ###
@@ -368,7 +353,7 @@ def process_links(body, flags):
 
 	"""
 	# add links
-	if not '--open' in flags and not '--display' in flags:
+	if '--open' not in flags and '--display' not in flags:
 		if not 'link_name' in body:
 			# set name based on url scheme 
 				
@@ -383,12 +368,13 @@ def process_links(body, flags):
 				body['link_name'] = "https://"+link_name
 			else:
 				body['link_name'] = link_name
-		if not 'language' in body:
+		if 'language' not in body:
 			body['language'] = ""
  		database = db.Database()
 		database.upsert_links(body)
 		print "Added link {0} to database.".format(body['link_name'].encode('utf-8'))
 		sys.exit(0)	
+
 	# display links	
 	elif '--display' in flags:
 		determine_display_operation(body, flags)
@@ -474,7 +460,7 @@ def determine_display_operation(body, flags):
 			results = database.retrieve_links(body, 'entire-display')			
 			column_list = ["index", "link name", "url", "language", 'description']
 
-		elif not 'language' in body:
+		elif 'language' not in body:
 			results = database.retrieve_links(body, 'display')
 			column_list = ["index", "link name", "url"]
 		
@@ -483,12 +469,12 @@ def determine_display_operation(body, flags):
 			column_list = ["index", "link name", "url", "language"]
 
 	elif '-e' in flags:
-		if not 'problem' in body:
+		if 'problem' not in body:
 			body['problem'] = ""
 		results = database.retrieve_content(body, "full")
 		column_list = ["index", "problem", "solution", "comment", "code added?"]
 	
-	elif not 'problem' in body:
+	elif 'problem' not in body:
 		results = database.retrieve_content(body, "language")
 		column_list = ["index", "problem", "solution", "code added?"]
 	
@@ -552,7 +538,7 @@ def build_table(column_list, all_rows, line_length, args_dict):
 			single_row[index] = textwrap.fill(dedented_item, width=field_length)	
 
 		#if code is present, print "yes", else "no"	
-		if not 'links' in args_dict and single_row[cl_length]:
+		if 'links' not in args_dict and single_row[cl_length]:
 			single_row[cl_length] = "yes"
 		else:
 			single_row[cl_length] = "no" 
@@ -605,8 +591,8 @@ class State(object):
 				attribute = default_attribute
 
 
-			if (len(user_input) <= 2 and index.isdigit() 
-			and int(index) >= 1 and int(index) <= len(self._results)):	
+			if (len(user_input) <= 2 and index.isdigit() and 
+			int(index) >= 1 and int(index) <= len(self._results)):	
 
 				actual_index = int(index)-1
 				if attribute and attribute in ('problem', 'solution', 'comment', 'link', 'code', 'bind', 'del'):
@@ -743,3 +729,23 @@ def unicode_everything(input_dict):
 				print error
 				input_dict[key] = process_and_validate_input("Enter " + key + " again: ")
 	return input_dict
+
+
+def read_and_delete_tmpfile(file_name):
+	"""Reads from tmpfile and tries to delete it afterwards.
+
+	"""
+
+	with open(file_name) as my_file:
+			try:
+				file_output = my_file.read()
+			except (IOError, OSError) as error:
+				print error
+				sys.exit(1)
+
+	try:
+		os.remove(file_name)
+	except OSError:
+		print "Couldn't delete temporary file." 
+
+	return file_output

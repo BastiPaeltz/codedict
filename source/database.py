@@ -352,7 +352,7 @@ class Database(object):
 
 		"""
 		
-		if not selection_type in ('language', 'basic', 'code', 'full'):
+		if selection_type not in ('language', 'basic', 'code', 'full'):
 			print "DB received no valid selection type."
 			sys.exit(1)
 
@@ -417,11 +417,11 @@ def determine_db_path():
 	"""
 
 	if getattr(sys, 'frozen', False):
-	       # The application is frozen
-	    datadir = os.path.dirname(sys.executable)
+		# The application is frozen
+		datadir = os.path.dirname(sys.executable)
 	else:
-	    # The application is not frozen
-	    datadir = os.path.dirname(__file__)
+		# The application is not frozen
+		datadir = os.path.dirname(__file__)
 
 	return datadir+'/res/codedict_db.DB'
 
