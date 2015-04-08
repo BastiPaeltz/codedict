@@ -4,7 +4,7 @@
 
 #relative import
 import database as db  
-import prettytable
+import lib.prettytable as prettytable
 
 #import from standard library
 import tempfile
@@ -200,8 +200,10 @@ def process_printing(table, database):
 	"""
 
 	decision = decide_where_to_print(table)
+
 	if decision == 'console':
 		print table
+		tmpfile = False
 	else:
 		tmpfile = print_to_editor(table, database) 
 	return tmpfile
@@ -550,10 +552,10 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 
 ###FOLLOW UP ###
-    
+	
 class State(object):
 	"""State (table, query results, database etc.) after the initial 'query' gets saved.
-	    Used for 'displaying' operations only.
+		Used for 'displaying' operations only.
 
 	"""
 

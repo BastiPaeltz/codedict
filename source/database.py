@@ -2,7 +2,7 @@
 
  
 """
-
+	
 #import from standard library
 import sqlite3
 import sys
@@ -198,7 +198,7 @@ class Database(object):
 		try:
 			with self._db_instance:
 
-			#add link to Links db if not exists
+				# add link to Links db if not exists
 				self._db_instance.execute('''
 					INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
 				''', (values['link_name'], values['url'], values['language']))

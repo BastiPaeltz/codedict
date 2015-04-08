@@ -45,7 +45,7 @@ Options:
 
 
 #relative import
-from docopt import docopt 
+from lib.docopt import docopt 
 import processor 
 import time
 
