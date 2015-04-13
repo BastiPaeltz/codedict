@@ -48,9 +48,19 @@ class Database(object):
 				''')
 
 				self._db_instance.execute('''
+					CREATE table IF NOT EXISTS Tags (id INTEGER PRIMARY KEY, 
+						tags TEXT, languageID INTEGER)
+				''')
+
+				self._db_instance.execute('''
+					CREATE table IF NOT EXISTS DictToTags (id INTEGER PRIMARY KEY, 
+						tagID INTEGER, dictID INTEGER)
+				''')
+	
+				self._db_instance.execute('''
 					CREATE table IF NOT EXISTS Dictionary 
 					(id INTEGER PRIMARY KEY, languageID INTEGER, 
-						problem TEXT, solution TEXT, comment TEXT, linkID INTEGER, code TEXT)
+						problem TEXT, solution TEXT, code TEXT)
 				''')
 
 				self._db_instance.execute('''
@@ -58,8 +68,8 @@ class Database(object):
 				''')
 
 				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Links (name TEXT PRIMARY KEY, 
-					URL text, description TEXT, language TEXT)
+					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT,
+					URL text, language TEXT)
 				''')
 
 				return True
@@ -311,23 +321,41 @@ class Database(object):
 		
 		try:
 			with self._db_instance:
-				
+				dict_cursor = self._db_instance.cursor()
+				tags_cursor = self.db_instance.cursor()			
 				#add language to lang db if not exists
 				self._db_instance.execute('''
 					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
 				''', (lang_name, ))
 				
 				for new_row in values:
-					self._db_instance.execute('''
+
+					dict_cursor.execute('''
 						INSERT or REPLACE into Dictionary 
-						(id, languageID, problem, solution, comment, code)
+						(id, languageID, problem, solution, code)
 						VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
 						(SELECT id from Languages where language = ?)), 
-						(SELECT id from Languages where language = ?), ?, ?, ?,
+						(SELECT id from Languages where language = ?), ?, ?,
 						COALESCE((SELECT code from Dictionary where problem = ? AND languageID = 
 						(SELECT id from Languages where language = ?)), ''))
-					''', (new_row[0], lang_name, lang_name, new_row[0], 
-						new_row[1], new_row[2], new_row[0], lang_name))
+					''', (new_row[1], lang_name, lang_name, new_row[1], 
+						new_row[2], new_row[2], new_row[0], lang_name))
+
+					tags_list = process_input_tags(new_row[0])
+
+					
+					for tag in tags_list:
+						tags_cursor.execute('''
+						INSERT OR IGNORE INTO Tags (tags, languageID) VALUES (?, ?)
+						''', (tag, lang_name))
+
+						tag_id = tags_cursor.lastrowid
+						dict_id = dict_cursor.lastrowid
+
+						self._db_instance.execute('''
+							INSERT OR IGNORE into DictToTags (tagID, dictID) VALUES (?, ?)
+						''', (tag_id, dict_id))
+
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
@@ -437,3 +465,14 @@ def establish_db_connection(db_path):
 	except sqlite3.Error as error:
 		print "A database error has occured: ", error
 		return False
+
+def process_input_tags(all_tags):
+	"""Gets input for the tags field, validates them and returns all.
+
+	"""
+
+	# type all_tags = str
+	tag_list = all_tags.split(";")
+
+	return tag_list
+

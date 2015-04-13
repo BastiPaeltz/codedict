@@ -231,7 +231,7 @@ def decide_where_to_print(table):
 		
 		return decision		
 
-def code_input_from_editor(suffix, database, existing_code):
+def input_from_editor(database, existing_content="", suffix=""):
 	"""Sets up a nice input form (editor) for code adding and viewing.
 
 	"""
@@ -240,7 +240,7 @@ def code_input_from_editor(suffix, database, existing_code):
 
 	editor_list = [argument for argument in editor_value.split(" ")]
 
-	prewritten_data = existing_code.encode('utf-8')
+	prewritten_data = existing_content.encode('utf-8')
 
 	try:
 		wait_enabled = database.get_config_item('wait')
@@ -248,7 +248,7 @@ def code_input_from_editor(suffix, database, existing_code):
 		wait_enabled = False
 
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
-		if existing_code:
+		if existing_content:
 			tmpfile.write(prewritten_data)
 			tmpfile.seek(0)
 
@@ -303,7 +303,7 @@ def process_code_adding(body, database=False, code_of_target=False):
 		existing_code = code_of_target
 
 	suffix = check_for_suffix(body['language'], database)
-	body['data'] = code_input_from_editor(suffix, database, existing_code)
+	body['data'] = input_from_editor(database, existing_content=existing_code, suffix=suffix)
 
 	try:
 		body['data'] = unicode(body['data'], 'utf-8')
@@ -336,7 +336,7 @@ def process_file_adding(body, flags):
 		sys.exit(1)
 
 	database = db.Database()
-
+	
 	# if file content should be treated as code, write it to DB. Otherwise find matches with regex.
 	if '--code' in flags:
 		body['data'] = file_text
@@ -432,16 +432,25 @@ def insert_content():
 	content_to_add = {}
 	
 	# get valid input 
+	database = db.Database()
 	
 	language = process_and_validate_input("Enter language: ")
-
-	for index, item in enumerate(('problem: ', 'solution: ', 'comment: ')):
-		content_to_add[index] = process_and_validate_input("Enter " + item) 
+	content_to_add[0] = process_and_validate_input("Enter your tags - seperated with ';' :")
+	content_to_add[1] = process_and_validate_input("Enter problem: ")
+	content_to_add[2] = input_from_editor(database) 
 				
-	database = db.Database()
 	database.add_content([content_to_add], language) # db method works best with lists
 	print "Finished - updated your codedict successfully."
 
+def process_input_tags():
+	"""Gets input for the tags field, validates them and returns all.
+
+	"""
+
+	all_tags = process_and_validate_input("Enter your tags - seperated with ';' :")
+	tag_list = all_tags.split(";")
+
+	return tag_list
 
 ### DISPLAYING functions ###
 
