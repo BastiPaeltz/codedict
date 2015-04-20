@@ -44,23 +44,23 @@ class Database(object):
 				# create tables
 				self._db_instance.execute('''
 					CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
-						language TEXT, suffix TEXT)
+						language TEXT UNIQUE, suffix TEXT)
 				''')
 
 				self._db_instance.execute('''
 					CREATE table IF NOT EXISTS Tags (id INTEGER PRIMARY KEY, 
-						tags TEXT, languageID INTEGER)
+						tags TEXT, language TEXT)
 				''')
 
 				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS DictToTags (id INTEGER PRIMARY KEY, 
+					CREATE table IF NOT EXISTS ItemsToTags (id INTEGER PRIMARY KEY, 
 						tagID INTEGER, dictID INTEGER)
 				''')
 	
 				self._db_instance.execute('''
 					CREATE table IF NOT EXISTS Dictionary 
-					(id INTEGER PRIMARY KEY, languageID INTEGER, 
-						problem TEXT, solution TEXT, code TEXT)
+					(id INTEGER PRIMARY KEY, language TEXT, 
+						problem TEXT, solution TEXT) 
 				''')
 
 				self._db_instance.execute('''
@@ -68,7 +68,7 @@ class Database(object):
 				''')
 
 				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT,
+					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
 					URL text, language TEXT)
 				''')
 
@@ -159,8 +159,8 @@ class Database(object):
 			with self._db_instance:
 				
 				self._db_instance.execute('''
-					DELETE from Dictionary WHERE problem = ? AND languageID = 
-					(SELECT id from Languages where language = ?)
+					DELETE from Dictionary WHERE problem = ? AND language = 
+					(SELECT language from Languages where language = ?)
 				''', (values['problem'], values['language']))
 				
 		except sqlite3.Error as error:
@@ -178,15 +178,15 @@ class Database(object):
 
 				if values['attribute'] != 'link':
 					self._db_instance.execute('''
-						UPDATE Dictionary SET {0} = ? WHERE problem = ? AND languageID = 
-						(SELECT id from Languages where language = ?)
+						UPDATE Dictionary SET {0} = ? WHERE problem = ? AND language = 
+						(SELECT language from Languages where language = ?)
 					'''.format(values['attribute']), 
 					(values['data'], 
 					values['problem'],
 					values['language']))
 				else:
 					self._db_instance.execute('''
-						UPDATE Links SET {0} = ? WHERE problem = ? AND languageID = 
+						UPDATE Links SET {0} = ? WHERE problem = ? AND language = 
 						(SELECT id from Languages where language = ?)
 					'''.format(values['attribute']), 
 					(values['data'], 
@@ -196,6 +196,79 @@ class Database(object):
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
+			sys.exit(1)
+
+### Tags
+
+	def update_tags(self, body, update_type):
+		"""Updates the tag field of item (link or dict)
+
+		"""
+
+		try:
+			with self._db_instance:
+				if update_type == 'add':
+					self._db_instance.execute('''
+						INSERT or IGNORE into Tags (name, language)
+						VALUES (?, ?)
+					''', (body['tag_name'], body['language']))
+
+					self._db_instance.execute('''
+						INSERT or REPLACE into ItemsToTags (tagID, dictID)
+						VALUES (
+						(SELECT id from Tags WHERE name = ? AND language = ?),
+						(SELECT id from Dictionary WHERE problem = ? and language = ?)
+						)
+					''', (body['tag_name'], body['language'], body['problem'], body['language']))
+
+				#update_type = delete 
+				else:
+					self._db_instance.execute('''
+						DELETE from ItemsToTags WHERE dictID = 
+						(SELECT id from Dictionary WHERE problem = ? and language = ?) 
+						AND tagID = (SELECT id from Tags WHERE name = ? AND language = ?)	
+					''', (body['problem'], body['language'], body['tag_name'], body['language']))
+
+		except sqlite3.Error as error:
+			print "A database error has occured: ", error
+			sys.exit(1)
+
+	def delete_tag(self, body):
+		"""Deletes the tag and all associated items (link or dict).
+
+		"""
+
+		try:
+			with self._db_instance:
+				self._db_instance.execute(
+					'''
+						DELETE from Tags WHERE name = ? AND language = 
+						(SELECT id from Languages where language = ?)
+					''', (body['tag_name'], body['language']))
+		
+		except sqlite3.Error as error:
+			print "A database error has occured ", error
+			sys.exit(1)
+
+
+	def retrieve_dict_per_tags(self, body):
+		"""Retrieves dict content based on tags.
+
+		"""
+
+		try:
+			with self._db_instance:
+				
+				result = self._db_instance.execute(
+					'''
+					SELECT problem, solution FROM Dictionary WHERE id =
+					(SELECT id from ItemsToTags WHERE tagID = 
+					(SELECT id from Tags where language = ? and name = ?) 	
+					''', (body['language'], body['tag_name']))
+				return result
+
+		except sqlite3.Error as error:
+			print "A database error has occured ", error
 			sys.exit(1)
 
 ### LINKS
@@ -260,13 +333,13 @@ class Database(object):
 
 					elif selection_type == 'lang_display': # lang display
 						selection = self._db_instance.execute('''
-							SELECT name, url, language from Links WHERE name LIKE ?
+							SELECT name, url from Links WHERE name LIKE ?
 							AND language = ? 
 						''', (values['link_name']+'%', values['language']))
 
 					else: # entire display
 						selection = self._db_instance.execute('''
-							SELECT name, url, language, description from Links WHERE name LIKE ?
+							SELECT name, url from Links WHERE name LIKE ?
 							AND language = ? 
 						''', (values['link_name']+'%', values['language'])) 
 
@@ -278,7 +351,7 @@ class Database(object):
 			sys.exit(1)
 
 
-	def upsert_code(self, values):
+	def upsert_solution(self, values):
 		"""Upserts (insert or update if exists) code into the DB. 
 		"""
 
@@ -292,17 +365,17 @@ class Database(object):
 				''', (values['language'], ))
 				
 				self._db_instance.execute('''
-					UPDATE Dictionary SET code = ? WHERE problem = ? AND languageID = 
-					(SELECT id from Languages where language = ?)
+					UPDATE Dictionary SET solution = ? WHERE problem = ? AND language = 
+					(SELECT language from Languages where language = ?)
 					''', (values['data'], 
 					values['problem'],
 					values['language']))
 				
 				self._db_instance.execute('''
-					INSERT or IGNORE into Dictionary (id, languageID, problem, solution, comment, code)
-					VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
-					(SELECT id from Languages where language = ?)) 
-					,(SELECT id from Languages where language = ?), ?, '', '', ?)
+					INSERT or IGNORE into Dictionary (id, language, problem, solution)
+					VALUES((SELECT id from Dictionary where problem = ? AND language = 
+					(SELECT language from Languages where language = ?)) 
+					,(SELECT language from Languages where language = ?), ?, ?, ?)
 				''', (values['problem'],
 					values['language'], 
 					values['language'], 
@@ -322,7 +395,7 @@ class Database(object):
 		try:
 			with self._db_instance:
 				dict_cursor = self._db_instance.cursor()
-				tags_cursor = self.db_instance.cursor()			
+				tags_cursor = self._db_instance.cursor()			
 				#add language to lang db if not exists
 				self._db_instance.execute('''
 					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
@@ -332,28 +405,29 @@ class Database(object):
 
 					dict_cursor.execute('''
 						INSERT or REPLACE into Dictionary 
-						(id, languageID, problem, solution, code)
-						VALUES((SELECT id from Dictionary where problem = ? AND languageID = 
-						(SELECT id from Languages where language = ?)), 
-						(SELECT id from Languages where language = ?), ?, ?,
-						COALESCE((SELECT code from Dictionary where problem = ? AND languageID = 
-						(SELECT id from Languages where language = ?)), ''))
+						(id, language, problem, solution)
+						VALUES((SELECT id from Dictionary where problem = ? AND language = 
+						(SELECT language from Languages where language = ?)), 
+						(SELECT language from Languages where language = ?), ?, 
+						COALESCE((SELECT solution from Dictionary where problem = ? AND language = 
+						(SELECT language from Languages where language = ?)), ?))
 					''', (new_row[1], lang_name, lang_name, new_row[1], 
-						new_row[2], new_row[2], new_row[0], lang_name))
+						new_row[1], lang_name, new_row[2]))
 
 					tags_list = process_input_tags(new_row[0])
-
 					
 					for tag in tags_list:
 						tags_cursor.execute('''
-						INSERT OR IGNORE INTO Tags (tags, languageID) VALUES (?, ?)
-						''', (tag, lang_name))
+						INSERT OR IGNORE INTO Tags (id, tags, language) VALUES (
+							(SELECT id from Tags WHERE tags = ? and language = ?), 
+							?, (SELECT language from Languages where language = ?))
+						''', (tag, lang_name, tag, lang_name))
 
 						tag_id = tags_cursor.lastrowid
 						dict_id = dict_cursor.lastrowid
 
 						self._db_instance.execute('''
-							INSERT OR IGNORE into DictToTags (tagID, dictID) VALUES (?, ?)
+							INSERT OR IGNORE into ItemsToTags (tagID, dictID) VALUES (?, ?)
 						''', (tag_id, dict_id))
 
 
@@ -390,23 +464,23 @@ class Database(object):
 				if selection_type == "basic":
 			
 					selection = self._db_instance.execute('''
-						SELECT problem, solution, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
-						(SELECT id from Languages where language = ?) 
+						SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
+						(SELECT language from Languages where language = ?) 
 					''', (location['problem']+'%', location['language']))
 
 
 				elif selection_type == "language":
 
 					selection = self._db_instance.execute('''
-						SELECT problem, solution, code FROM Dictionary WHERE languageID = 
-						(SELECT id from Languages where language = ?) 
+						SELECT problem, solution FROM Dictionary WHERE language = 
+						(SELECT language from Languages where language = ?) 
 					''', (location['language'], ))
 
 
 				elif selection_type == "code":
 
 					selection = self._db_instance.execute('''
-						SELECT code FROM Dictionary WHERE problem = ? and languageID = 
+						SELECT solution FROM Dictionary WHERE problem = ? and language = 
 						(SELECT id from Languages where language = ?)
 						''', (location['problem'], location['language']))
 
@@ -414,7 +488,7 @@ class Database(object):
 				elif selection_type == "full":
 
 					selection = self._db_instance.execute('''
-						SELECT problem, solution, comment, link, code FROM Dictionary WHERE problem LIKE ? AND languageID = 
+						SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
 						(SELECT id from Languages where language = ?) 
 					''', (location['problem']+'%', location['language']))
 
@@ -472,7 +546,9 @@ def process_input_tags(all_tags):
 	"""
 
 	# type all_tags = str
-	tag_list = all_tags.split(";")
-
+	if ";" in all_tags:
+		tag_list = all_tags.split(";")
+	else:
+		tag_list = all_tags
 	return tag_list
 

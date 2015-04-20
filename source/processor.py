@@ -28,7 +28,7 @@ def start_process(cmd_line_args):
 	relevant_args = ({key: value for key, value in cmd_line_args.iteritems() 
 					if value is not False and value is not None})
 
-	unicode_everything(relevant_args)
+	relevant_args = unicode_everything(relevant_args)
 
 	if '--editor' in relevant_args:
 		set_editor(relevant_args['EDITOR'])
@@ -69,7 +69,7 @@ def set_editor(editor):
 	"""
 
 	database = db.Database()
-	database.set_config_item('editor', unicode(editor.strip(), 'utf-8'))
+	database.set_config_item('editor', editor.strip())
 	print "Setting editor {0} successfull.".format(editor.encode('utf-8'))
 
 
@@ -79,7 +79,7 @@ def set_suffix(suffix, language):
 	"""
 
 	database = db.Database()	
-	database.set_suffix(language.strip(), unicode(suffix, 'utf-8'))
+	database.set_suffix(language.strip(), suffix)
 	print "Setting suffix {0} for {1} successfull.".format(suffix.encode('utf-8'), language.encode('utf-8'))
 
 
@@ -336,7 +336,7 @@ def process_file_adding(body, flags):
 		sys.exit(1)
 
 	database = db.Database()
-	
+
 	# if file content should be treated as code, write it to DB. Otherwise find matches with regex.
 	if '--code' in flags:
 		body['data'] = file_text
@@ -435,22 +435,19 @@ def insert_content():
 	database = db.Database()
 	
 	language = process_and_validate_input("Enter language: ")
-	content_to_add[0] = process_and_validate_input("Enter your tags - seperated with ';' :")
+	content_to_add[0] = process_and_validate_input("Enter your tags - seperated with ';' : ")
 	content_to_add[1] = process_and_validate_input("Enter problem: ")
-	content_to_add[2] = input_from_editor(database) 
+
+	# no editor wished
+	if content_to_add[1].startswith('!!'):
+		content_to_add[1] = content_to_add[1].replace('!!', '', 1)
+		content_to_add[2] = process_and_validate_input("Enter solution: ")
+	else:
+		content_to_add[2] = input_from_editor(database) 
 				
 	database.add_content([content_to_add], language) # db method works best with lists
 	print "Finished - updated your codedict successfully."
 
-def process_input_tags():
-	"""Gets input for the tags field, validates them and returns all.
-
-	"""
-
-	all_tags = process_and_validate_input("Enter your tags - seperated with ';' :")
-	tag_list = all_tags.split(";")
-
-	return tag_list
 
 ### DISPLAYING functions ###
 
@@ -465,34 +462,18 @@ def determine_display_operation(body, flags):
 
 	display_type = "display"
 
-	if '-l' in flags:
+	results = []
+ 
+	if '-t' in flags:
+		display_type = "tag"
+		results, column_list = get_dict_results(database, body, flags)
+
+	elif '-l' in flags:
 		display_type = "link"
-		if '-e' in flags:
-			results = database.retrieve_links(body, 'entire-display')			
-			column_list = ["index", "link name", "url", "language", 'description']
-
-		elif 'language' not in body:
-			results = database.retrieve_links(body, 'display')
-			column_list = ["index", "link name", "url"]
-		
-		else:
-			results = database.retrieve_links(body, 'lang-display')			
-			column_list = ["index", "link name", "url", "language"]
-
-	elif '-e' in flags:
-		if 'problem' not in body:
-			body['problem'] = ""
-		results = database.retrieve_content(body, "full")
-		column_list = ["index", "problem", "solution", "comment", "code added?"]
-	
-	elif 'problem' not in body:
-		results = database.retrieve_content(body, "language")
-		column_list = ["index", "problem", "solution", "code added?"]
+		results, column_list = get_link_results(database, body, flags)
 	
 	else:
-		results = database.retrieve_content(body, "basic")
-		column_list = ["index", "problem", "solution", "code added?"]
-	
+		results, column_list = get_dict_results(database, body, flags)
 
 	if results:
 
@@ -500,13 +481,61 @@ def determine_display_operation(body, flags):
 
 		updated_results, table = build_table(column_list, results, console_linelength, args_dict)
 		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
-		# TODO : handle tmpfile removal
 		state = State(database, body, flags, updated_results)
 		state.process_follow_up_operation(display_type, tmpfile)
 		state.perform_original_request(body, flags)
 	else:
 		print "No results."
+
+def get_link_results(database, body, flags):
+	"""Gets all results for link query from DB and returns the column list additionally.
+
+	"""
+
+	if '-t' in flags:
+		results = database.retrieve_links_per_tag(body)			
+		column_list = ["index", "link name", "url"]
+
+	elif '-e' in flags:
+		results = database.retrieve_links(body, 'entire-display')			
+		column_list = ["index", "link name", "url"]
+
+	elif 'language' not in body:
+		results = database.retrieve_links(body, 'display')
+		column_list = ["index", "link name", "url"]
+	
+	else:
+		if not 'link_name' in body:
+			body['link_name'] = ""
+		results = database.retrieve_links(body, 'lang-display')			
+		column_list = ["index", "link name", "url"]
+
+	return (results, column_list)
 		
+def get_dict_results(database, body, flags):
+	""" TODO
+
+	"""
+
+	if '-t' in flags:
+		results = database.retrieve_dict_per_body(body)			
+		column_list = ["index", "link name", "url"]
+
+	if '-e' in flags:
+		if 'searchpattern' not in body:
+			body['problem'] = ""
+		results = database.retrieve_content(body, "full")
+		column_list = ["index", "problem", "solution preview"]
+	
+	elif 'searchpattern' not in body:
+		results = database.retrieve_content(body, "language")
+		column_list = ["index", "problem", "solution preview"]
+	
+	else:
+		results = database.retrieve_content(body, "basic")
+		column_list = ["index", "problem", "solution preview"]
+
+	return (results, column_list)
 
 def set_console_length(database):
 	"""Gets console length from DB and sets it appropiately. --> convert to int
@@ -528,7 +557,6 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 	#column list length(-1)
 	cl_length = len(column_list)-1
-	
 	result_table = prettytable.PrettyTable(column_list)
 	if 'hline' in args_dict:
 		result_table.hrules = prettytable.ALL 
@@ -536,30 +564,32 @@ def build_table(column_list, all_rows, line_length, args_dict):
 	all_rows_as_list = []
 
 	field_length = line_length/(cl_length+1)
-
+	print all_rows
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
-		for index in range(1, cl_length): 	# code and index dont need to be filled
-			if 'cut_search' in args_dict and index == 1:
-				single_row[index] = single_row[index].replace(args_dict['cut_search'], "", 1) 
+		
+		if not 'link' in args_dict:
+			single_row[cl_length] = single_row[cl_length][0:50] + " ..." 
+
+		for index in range(1, cl_length+1): 	# code and index dont need to be filled
 			if not single_row[index]:
 				single_row[index] = ""
 
 			dedented_item = textwrap.dedent(single_row[index]).strip()
 			single_row[index] = textwrap.fill(dedented_item, width=field_length)	
 
+		# print 2 lines of solution as preview
 		#if code is present, print "yes", else "no"	
-		if 'links' not in args_dict and single_row[cl_length]:
-			single_row[cl_length] = "yes"
-		else:
-			single_row[cl_length] = "no" 
+		# if 'links' not in args_dict and single_row[cl_length]:
+		# 	single_row[cl_length] = "yes"
+		# else:
+		# 	single_row[cl_length] = "no" 
 
 		#add modified row to table, add original row to return-list
 		result_table.add_row(single_row)
 		all_rows_as_list.append(list(row))
 	return (all_rows_as_list, result_table)
-
-
+	
 ###FOLLOW UP ###
 	
 class State(object):
@@ -630,17 +660,17 @@ class State(object):
 
 		# link table
 		if operation_type == 'link':
-			prompt = "Do you want to do more? Valid input: INDEX [('DEL' | 'BIND')] - Press ENTER to abort: \n"
+			prompt = "Do you want to do more? Valid input: INDEX [ACTION] - Press ENTER to abort: \n"
 			target, attribute = self._prompt_by_index(prompt, 'link', tmpfile)
 			self._link_determine_operation(target, attribute)
 
 		# dict table
 		else:
-			prompt = "Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort: \n"
+			prompt = "Do you want to do more? Valid input: INDEX [ACTION] - Press ENTER to abort: \n"
 			target, attribute = self._prompt_by_index(prompt, 'code', tmpfile)
 		
 			self._original_body['problem'] = target[1]
-			
+			print self._original_body	
 			if attribute != 'code':
 				self._original_body['attribute'] = attribute
 				return update_content(self._original_body, database=self._database) 
@@ -660,7 +690,7 @@ class State(object):
 		# default - run link in webbrowser
 		if attribute == 'link':
 			self._original_body['link_name'] = target[1]
-			link_url = self._database.retrieve_link(self._original_body, 'open')
+			link_url = self._database.retrieve_links(self._original_body, 'open')
 			if link_url:
 				requested_url = link_url[0]
 				if not requested_url.startswith('http'):
@@ -688,6 +718,7 @@ class State(object):
 		else: 
 			self._original_body['description'] = (process_and_validate_input("Add description for"+
 			self._original_body['link_name']))
+
 
 
 ## HELPER
