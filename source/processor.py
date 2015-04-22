@@ -91,7 +91,7 @@ def set_line_length(length):
 	try:
 		int(length)
 		database = db.Database()
-		database.set_config_item('linelength', unicode(length.strip(), 'utf-8'))
+		database.set_config_item('linelength', length.encode('utf-8'))
 		print "Setting your console line length to {0} successfull.".format(length)
 	except ValueError:
 		print "Console line length must be an integer."
@@ -103,8 +103,8 @@ def split_arguments(arguments):
 
 	request, flags = {}, {}
 	for key, item in arguments.iteritems(): 
-		if key in ('-e', '-c', '-l', '-a', '-d', '-f', 
-			'--code', '--cut', '--hline', '--suffix', '--display', '--open'):
+		if key in ('-c', '-l', '-a', '-d', '-f', '-t', 
+			'--hline', '--suffix', '--open'):
 			flags[key] = item
 		else:
 			request[key.lower()] = item 
@@ -315,7 +315,7 @@ def process_code_adding(body, database=False, code_of_target=False):
 		print "Nothing changed."		
 	else:
 		body['attribute'] = "code"
-		database.upsert_code(body)
+		database.upsert_solution(body)
 
 	print "Finished - updated your codedict successfully."
 
@@ -360,18 +360,21 @@ def process_links(body, flags):
 			# set name based on url scheme 
 				
 			entire_url = urlparse.urlsplit(body['url'])
-
 			for url_part in reversed(entire_url):
 				if url_part:
 					subpart = url_part.split("/")
 					link_name = subpart[len(subpart)-1].replace('.html', '')
 					break
 			if not entire_url.scheme:
-				body['link_name'] = "https://"+link_name
+				body['link_name'] = "http://"+link_name
 			else:
 				body['link_name'] = link_name
+
 		if 'language' not in body:
+			body['original-lang'] = ""
 			body['language'] = ""
+		else:
+			body['original-lang'] = body['language']
 		database = db.Database()
 		database.upsert_links(body)
 		print "Added link {0} to database.".format(body['link_name'].encode('utf-8'))
@@ -405,6 +408,7 @@ def run_webbrowser(url):
 	os.close(1)
 	os.open(os.devnull, os.O_RDWR)
 	webbrowser.get().open(url)
+	sys.exit(0)
 
 ## ADDING
 
@@ -416,10 +420,12 @@ def update_content(body, database=False):
 		database = db.Database()
 
 	if body['attribute'] != 'del': 
-		
-		body['data'] = process_and_validate_input("Change "+body['attribute']+" to: ")
-				
-		database.update_content(body)		
+	
+		if body['attribute'] != 'solution':
+			body['data'] = process_and_validate_input("Change "+body['attribute']+" to: ")
+			database.update_content(body)
+		else:
+			process_code_adding(body, database=database) 
 	else:
 		database.delete_content(body)
 
@@ -456,6 +462,7 @@ def determine_display_operation(body, flags):
 
 	"""
 
+	print flags
 	args_dict = build_args_dict(body, flags)
 
 	database = db.Database()
@@ -492,21 +499,16 @@ def get_link_results(database, body, flags):
 
 	"""
 
-	if '-t' in flags:
-		results = database.retrieve_links_per_tag(body)			
-		column_list = ["index", "link name", "url"]
+	# if '-t' in flags:
+	# 	results = database.retrieve_links_per_tag(body)			
+	# 	column_list = ["index", "link name", "url", "language"]
 
-	elif '-e' in flags:
-		results = database.retrieve_links(body, 'entire-display')			
-		column_list = ["index", "link name", "url"]
-
-	elif 'language' not in body:
+	if 'searchpattern' not in body:
+		body['searchpattern'] = ""  
 		results = database.retrieve_links(body, 'display')
-		column_list = ["index", "link name", "url"]
+		column_list = ["index", "link name", "url", "language"]
 	
 	else:
-		if not 'link_name' in body:
-			body['link_name'] = ""
 		results = database.retrieve_links(body, 'lang-display')			
 		column_list = ["index", "link name", "url"]
 
@@ -518,14 +520,14 @@ def get_dict_results(database, body, flags):
 	"""
 
 	if '-t' in flags:
-		results = database.retrieve_dict_per_body(body)			
-		column_list = ["index", "link name", "url"]
+		results = database.retrieve_dict_per_tags(body)			
+		column_list = ["index", "problem", "solution"]
 
-	if '-e' in flags:
-		if 'searchpattern' not in body:
-			body['problem'] = ""
-		results = database.retrieve_content(body, "full")
-		column_list = ["index", "problem", "solution preview"]
+	# if '-e' in flags:
+	# 	if 'searchpattern' not in body:
+	# 		body['problem'] = ""
+	# 	results = database.retrieve_content(body, "full")
+	# 	column_list = ["index", "problem", "solution preview"]
 	
 	elif 'searchpattern' not in body:
 		results = database.retrieve_content(body, "language")
@@ -533,7 +535,7 @@ def get_dict_results(database, body, flags):
 	
 	else:
 		results = database.retrieve_content(body, "basic")
-		column_list = ["index", "problem", "solution preview"]
+		column_list = ["index", "language", "problem", "solution preview"]
 
 	return (results, column_list)
 
@@ -569,7 +571,11 @@ def build_table(column_list, all_rows, line_length, args_dict):
 		single_row = list(row)			# row is a tuple and contains db query results.
 		
 		if not 'link' in args_dict:
-			single_row[cl_length] = single_row[cl_length][0:50] + " ..." 
+			if len(single_row[cl_length]) > 50:
+				appended_string = "..."
+			else:
+				appended_string = ""
+			single_row[cl_length] = single_row[cl_length][0:50] + appended_string 
 
 		for index in range(1, cl_length+1): 	# code and index dont need to be filled
 			if not single_row[index]:
@@ -636,7 +642,7 @@ class State(object):
 			int(index) >= 1 and int(index) <= len(self._results)):	
 
 				actual_index = int(index)-1
-				if attribute and attribute in ('problem', 'solution', 'comment', 'link', 'code', 'bind', 'del'):
+				if attribute and attribute in ('problem', 'solution', 'link', 'code', 'lang', 'del'):
 					valid_input = True
 				else:
 					print "Wrong attribute, Please try again."
@@ -650,7 +656,8 @@ class State(object):
 		"""Performs original request again.
 
 		"""
-		print ""
+
+		print "\n---------------\n"
 		return determine_proceeding(body, flags)
 
 	def process_follow_up_operation(self, operation_type, tmpfile):
@@ -707,19 +714,17 @@ class State(object):
 			print "Deleting link {0} successfully.".format(target[1].encode('utf-8'))
 
 		# bind language to link
-		elif attribute == 'bind':
+		elif attribute == 'lang':
 			self._original_body['language'] = process_and_validate_input("Bind "+target[1]+" to language : ")
 			self._original_body['link_name'] = target[1]
 			self._original_body['url'] = target[2]
+			self._original_body['original-lang'] = target[-1]
 			self._database.upsert_links(self._original_body, operation_type='upsert')
 			print "Binding link {0} successfull.".format(self._original_body['link_name'].encode('utf-8'))
 
 		# set description for link
 		else: 
-			self._original_body['description'] = (process_and_validate_input("Add description for"+
-			self._original_body['link_name']))
-
-
+			print "Error with flags."	
 
 ## HELPER
 

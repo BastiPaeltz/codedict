@@ -259,13 +259,14 @@ class Database(object):
 		try:
 			with self._db_instance:
 				
-				result = self._db_instance.execute(
+				results = self._db_instance.execute(
 					'''
 					SELECT problem, solution FROM Dictionary WHERE id =
-					(SELECT id from ItemsToTags WHERE tagID = 
-					(SELECT id from Tags where language = ? and name = ?) 	
-					''', (body['language'], body['tag_name']))
-				return result
+					(SELECT dictID from ItemsToTags WHERE tagID = 
+					(SELECT id from Tags where language = ? and tags = ?)) 	
+					''', (body['language'], body['searchpattern']))
+
+				return selected_rows_to_list(results)
 
 		except sqlite3.Error as error:
 			print "A database error has occured ", error
@@ -283,14 +284,18 @@ class Database(object):
 
 				# add link to Links db if not exists
 				self._db_instance.execute('''
-					INSERT OR IGNORE INTO Links (name, url, language) VALUES (?, ?, ?)
-				''', (values['link_name'], values['url'], values['language']))
+					INSERT OR IGNORE INTO Links (id, name, url, language) VALUES 
+					((SELECT id from Links WHERE name = ? AND language = ?), ?, ?, ?)
+				''', (values['link_name'], values['original-lang'], values['link_name'],
+					values['url'], values['language']))
 				
 				if operation_type == 'upsert':
 				
 					self._db_instance.execute('''
-						UPDATE Links SET language = ? WHERE name = ? AND url = ?
-					''', (values['language'], values['link_name'], values['url']))
+						UPDATE Links SET language = ? WHERE name = ? AND url = ? AND language = ?
+					''', (values['language'], values['link_name'], 
+						values['url'], values['original-lang']))
+
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -322,26 +327,22 @@ class Database(object):
 
 					selection = self._db_instance.execute('''
 						SELECT url from Links WHERE name LIKE ? 
-					''', (values['link_name']+'%', )) 
+					''', (values['searchpattern']+'%', )) 
 					return selection.fetchone()
 
 				else: # display 
+
 					if selection_type == 'display':
 						selection = self._db_instance.execute('''
-							SELECT name, url from Links WHERE name LIKE ?
-						''', (values['link_name']+'%', )) 
+							SELECT name, url, language from Links WHERE name LIKE ?
+						''', (values['searchpattern']+'%', )) 
 
-					elif selection_type == 'lang_display': # lang display
+					elif selection_type == 'lang-display': # lang display
 						selection = self._db_instance.execute('''
 							SELECT name, url from Links WHERE name LIKE ?
 							AND language = ? 
-						''', (values['link_name']+'%', values['language']))
+						''', (values['searchpattern']+'%', values['language']))
 
-					else: # entire display
-						selection = self._db_instance.execute('''
-							SELECT name, url from Links WHERE name LIKE ?
-							AND language = ? 
-						''', (values['link_name']+'%', values['language'])) 
 
 					selection_list = selected_rows_to_list(selection)
 					return selection_list
@@ -375,7 +376,7 @@ class Database(object):
 					INSERT or IGNORE into Dictionary (id, language, problem, solution)
 					VALUES((SELECT id from Dictionary where problem = ? AND language = 
 					(SELECT language from Languages where language = ?)) 
-					,(SELECT language from Languages where language = ?), ?, ?, ?)
+					,(SELECT language from Languages where language = ?), ?, ?)
 				''', (values['problem'],
 					values['language'], 
 					values['language'], 
@@ -454,7 +455,7 @@ class Database(object):
 
 		"""
 		
-		if selection_type not in ('language', 'basic', 'code', 'full'):
+		if selection_type not in ('language', 'basic', 'code'):
 			print "DB received no valid selection type."
 			sys.exit(1)
 
@@ -484,13 +485,6 @@ class Database(object):
 						(SELECT id from Languages where language = ?)
 						''', (location['problem'], location['language']))
 
-
-				elif selection_type == "full":
-
-					selection = self._db_instance.execute('''
-						SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
-						(SELECT id from Languages where language = ?) 
-					''', (location['problem']+'%', location['language']))
 
 				return selection
 
