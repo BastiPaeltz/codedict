@@ -128,7 +128,7 @@ class Database(object):
 					SELECT suffix from Languages where language = ?
 				''', (lang_name, ))
 
-			return suffix.fetchone()[0]
+			return suffix.fetchone()
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
@@ -482,7 +482,7 @@ class Database(object):
 
 					selection = self._db_instance.execute('''
 						SELECT solution FROM Dictionary WHERE problem = ? and language = 
-						(SELECT id from Languages where language = ?)
+						(SELECT language from Languages where language = ?)
 						''', (location['problem'], location['language']))
 
 

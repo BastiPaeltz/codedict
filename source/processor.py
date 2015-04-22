@@ -138,8 +138,8 @@ def check_for_suffix(language, database):
 
 	suffix = database.retrieve_suffix(language)
 
-	if suffix:
-		return suffix
+	if suffix[0]:
+		return suffix[0]
 	else:
 		input_suffix = process_and_validate_input("Enter file suffix for language " +language+" : ")
 		database.set_suffix(language, input_suffix)
@@ -247,6 +247,7 @@ def input_from_editor(database, existing_content="", suffix=""):
 	except IndexError:
 		wait_enabled = False
 
+	print suffix
 	with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmpfile:
 		if existing_content:
 			tmpfile.write(prewritten_data)
@@ -565,7 +566,7 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 	all_rows_as_list = []
 
-	field_length = line_length/(cl_length+1)
+	field_length = line_length-10/(cl_length)
 	print all_rows
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
@@ -583,13 +584,6 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 			dedented_item = textwrap.dedent(single_row[index]).strip()
 			single_row[index] = textwrap.fill(dedented_item, width=field_length)	
-
-		# print 2 lines of solution as preview
-		#if code is present, print "yes", else "no"	
-		# if 'links' not in args_dict and single_row[cl_length]:
-		# 	single_row[cl_length] = "yes"
-		# else:
-		# 	single_row[cl_length] = "no" 
 
 		#add modified row to table, add original row to return-list
 		result_table.add_row(single_row)
