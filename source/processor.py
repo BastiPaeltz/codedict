@@ -339,9 +339,9 @@ def process_file_adding(body, flags):
 	database = db.Database()
 
 	# if file content should be treated as code, write it to DB. Otherwise find matches with regex.
-	if '--code' in flags:
+	if 'problem' in body:
 		body['data'] = file_text
-		database.upsert_code(body)	
+		database.upsert_solution(body)	
 	else:
 		all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|', 
 		file_text, re.UNICODE))
@@ -485,7 +485,7 @@ def determine_display_operation(body, flags):
 
 	if results:
 
-		console_linelength = set_console_length(database) 
+		console_linelength = get_console_length(database) 
 
 		updated_results, table = build_table(column_list, results, console_linelength, args_dict)
 		tmpfile = process_printing(table, database)  # tmpfile gets returned so it can be removed from os.
@@ -521,6 +521,8 @@ def get_dict_results(database, body, flags):
 	"""
 
 	if '-t' in flags:
+		if not 'searchpattern' in body:
+			body['searchpattern'] = ""
 		results = database.retrieve_dict_per_tags(body)			
 		column_list = ["index", "problem", "solution"]
 
@@ -540,7 +542,7 @@ def get_dict_results(database, body, flags):
 
 	return (results, column_list)
 
-def set_console_length(database):
+def get_console_length(database):
 	"""Gets console length from DB and sets it appropiately. --> convert to int
 
 	"""
@@ -566,8 +568,8 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 	all_rows_as_list = []
 
-	field_length = line_length-10/(cl_length)
-	print all_rows
+	field_length = line_length/(cl_length)
+	
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
 		
