@@ -47,10 +47,8 @@ import time
 if __name__ == '__main__':
 
     COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.9")
-    start = time.time()
+
     try:
         processor.start_process(COMMAND_LINE_ARGS)
     except (KeyboardInterrupt, EOFError):
         print "\nAborted!"
-    finally:
-       print "time {0} sec.".format(time.time()-start)

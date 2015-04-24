@@ -200,7 +200,28 @@ class Database(object):
 
 ### Tags
 
-	def update_tags(self, body, update_type):
+	def get_tags(self, values):
+		"""Retrieves / gets tags from DB.
+
+		"""
+
+		try:
+			with self._db_instance:
+
+				results = self._db_instance.execute(
+					'''
+					SELECT name FROM Tags WHERE id =
+					(SELECT tagID from ItemsToTags WHERE dictID = 
+					(SELECT id from Dictionary where language = ? and problem = ?)) 	
+					''', (values['language'], values['problem']))
+
+				return selected_rows_to_list(results)
+
+		except sqlite3.Error as error:
+			print " A database error has occured.", error
+
+	
+	def update_tags(self, values, update_type):
 		"""Updates the tag field of item (link or dict)
 
 		"""
@@ -211,7 +232,7 @@ class Database(object):
 					self._db_instance.execute('''
 						INSERT or IGNORE into Tags (name, language)
 						VALUES (?, ?)
-					''', (body['tag_name'], body['language']))
+					''', (values['tag_name'], values['language']))
 
 					self._db_instance.execute('''
 						INSERT or REPLACE into ItemsToTags (tagID, dictID)
@@ -219,7 +240,7 @@ class Database(object):
 						(SELECT id from Tags WHERE name = ? AND language = ?),
 						(SELECT id from Dictionary WHERE problem = ? and language = ?)
 						)
-					''', (body['tag_name'], body['language'], body['problem'], body['language']))
+					''', (values['tag_name'], values['language'], values['problem'], values['language']))
 
 				#update_type = delete 
 				else:
@@ -227,13 +248,13 @@ class Database(object):
 						DELETE from ItemsToTags WHERE dictID = 
 						(SELECT id from Dictionary WHERE problem = ? and language = ?) 
 						AND tagID = (SELECT id from Tags WHERE name = ? AND language = ?)	
-					''', (body['problem'], body['language'], body['tag_name'], body['language']))
+					''', (values['problem'], values['language'], values['tag_name'], values['language']))
 
 		except sqlite3.Error as error:
 			print "A database error has occured: ", error
 			sys.exit(1)
 
-	def delete_tag(self, body):
+	def delete_tag(self, values):
 		"""Deletes the tag and all associated items (link or dict).
 
 		"""
@@ -244,7 +265,7 @@ class Database(object):
 					'''
 						DELETE from Tags WHERE name = ? AND language = 
 						(SELECT id from Languages where language = ?)
-					''', (body['tag_name'], body['language']))
+					''', (values['tag_name'], values['language']))
 		
 		except sqlite3.Error as error:
 			print "A database error has occured ", error
@@ -292,8 +313,8 @@ class Database(object):
 				if operation_type == 'upsert':
 				
 					self._db_instance.execute('''
-						UPDATE Links SET language = ? WHERE name = ? AND url = ? AND language = ?
-					''', (values['language'], values['link_name'], 
+						UPDATE Links SET {0} = ? WHERE name = ? AND url = ? AND language = ?
+					'''.format(values['attribute']), (values['data'], values['link_name'], 
 						values['url'], values['original-lang']))
 
 		except sqlite3.Error as error:
@@ -307,7 +328,6 @@ class Database(object):
 
 		try:
 			with self._db_instance:
-				print values	
 				self._db_instance.execute('''
 					DELETE from Links WHERE url = ? 
 				''', (values['url'], ))
@@ -539,7 +559,6 @@ def process_input_tags(all_tags):
 
 	"""
 
-	# type all_tags = str
 	if ";" in all_tags:
 		tag_list = all_tags.split(";")
 	else:

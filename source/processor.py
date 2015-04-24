@@ -80,7 +80,8 @@ def set_suffix(suffix, language):
 
 	database = db.Database()	
 	database.set_suffix(language.strip(), suffix)
-	print "Setting suffix {0} for {1} successfull.".format(suffix.encode('utf-8'), language.encode('utf-8'))
+	print "Setting suffix {0} for {1} successfull.".format(
+		suffix.encode('utf-8'), language.encode('utf-8'))
 
 
 def set_line_length(length):
@@ -119,7 +120,7 @@ def determine_proceeding(body, flags):
 
 
 	if '-f' in flags:
-		process_file_adding(body, flags)
+		process_file_adding(body)
 	elif '-d' in flags:
 		determine_display_operation(body, flags)
 	elif '-a' in flags:
@@ -220,7 +221,8 @@ def decide_where_to_print(table):
 		
 		decision = ""
 		while decision == "":
-			choice = process_and_validate_input("Output longer than 25 lines - print to console anyway? (y/n)")
+			choice = process_and_validate_input("Output longer than 25 lines -" 
+				"print to console anyway? (y/n)")
 
 			if choice in ('y', 'yes', 'Yes', 'Y'):
 				decision = "console"
@@ -323,7 +325,7 @@ def process_code_adding(body, database=False, code_of_target=False):
 
 ###FILE ###
 
-def process_file_adding(body, flags):
+def process_file_adding(body):
 	"""Processes adding content to DB from a file.
 
 	"""
@@ -356,20 +358,12 @@ def process_links(body, flags):
 
 	"""
 	# add links
-	if '--open' not in flags and '--display' not in flags:
+	if '--open' not in flags: 
 		if 'link_name' not in body:
+
 			# set name based on url scheme 
 				
-			entire_url = urlparse.urlsplit(body['url'])
-			for url_part in reversed(entire_url):
-				if url_part:
-					subpart = url_part.split("/")
-					link_name = subpart[len(subpart)-1].replace('.html', '')
-					break
-			if not entire_url.scheme:
-				body['link_name'] = "http://"+link_name
-			else:
-				body['link_name'] = link_name
+			body['link_name'] = set_link_name(body)
 
 		if 'language' not in body:
 			body['original-lang'] = ""
@@ -397,6 +391,23 @@ def process_links(body, flags):
 		if not requested_url.startswith('http'):
 			requested_url = 'http://'+requested_url
 		run_webbrowser(requested_url)
+
+
+def set_link_name(body):
+	"""Sets the link name if not given,
+	   based on the url scheme.
+	"""
+	
+	entire_url = urlparse.urlsplit(body['url'])
+	for url_part in reversed(entire_url):
+		if url_part:
+			subpart = url_part.split("/")
+			link_name = subpart[len(subpart)-1].replace('.html', '')
+			break
+	if not entire_url.scheme:
+		return "http://"+link_name
+	else:
+		return link_name
 
 def run_webbrowser(url):
 	"""Runs the url in the webbrowser.
@@ -478,7 +489,7 @@ def determine_display_operation(body, flags):
 
 	elif '-l' in flags:
 		display_type = "link"
-		results, column_list = get_link_results(database, body, flags)
+		results, column_list = get_link_results(database, body)
 	
 	else:
 		results, column_list = get_dict_results(database, body, flags)
@@ -495,7 +506,7 @@ def determine_display_operation(body, flags):
 	else:
 		print "No results."
 
-def get_link_results(database, body, flags):
+def get_link_results(database, body):
 	"""Gets all results for link query from DB and returns the column list additionally.
 
 	"""
@@ -568,8 +579,8 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
 	all_rows_as_list = []
 
-	field_length = line_length/(cl_length)
-	
+	field_length = line_length-10/(cl_length)
+
 	for row in all_rows:
 		single_row = list(row)			# row is a tuple and contains db query results.
 		
@@ -603,10 +614,10 @@ class State(object):
 	def __init__(self, database, body, flags, query_result):
 		self._database = database
 		self._results = query_result
-		self._original_body = body
+		self.body_state = body
 		self._original_flags = flags
 
-	def _prompt_by_index(self, prompt, default_attribute, tmpfile=False):
+	def _prompt_by_index(self, prompt, default_attribute, permitted_actions, tmpfile=False):
 		"Prompts the user for further commands after displaying content or links."
 
 
@@ -638,7 +649,7 @@ class State(object):
 			int(index) >= 1 and int(index) <= len(self._results)):	
 
 				actual_index = int(index)-1
-				if attribute and attribute in ('problem', 'solution', 'link', 'code', 'lang', 'del'):
+				if attribute and attribute in permitted_actions:
 					valid_input = True
 				else:
 					print "Wrong attribute, Please try again."
@@ -661,29 +672,56 @@ class State(object):
 
 		"""
 
+		prompt = "Do you want to do more? Valid input: INDEX [ACTION] - Press ENTER to abort: \n"
+		
 		# link table
 		if operation_type == 'link':
-			prompt = "Do you want to do more? Valid input: INDEX [ACTION] - Press ENTER to abort: \n"
-			target, attribute = self._prompt_by_index(prompt, 'link', tmpfile)
+			permitted_actions = ('del', 'name', 'link', 'lang')
+			target, attribute = self._prompt_by_index(prompt, 'link', permitted_actions, tmpfile)
 			self._link_determine_operation(target, attribute)
 
 		# dict table
 		else:
-			prompt = "Do you want to do more? Valid input: INDEX [ACTION] - Press ENTER to abort: \n"
-			target, attribute = self._prompt_by_index(prompt, 'code', tmpfile)
+			permitted_actions = ('del', 'problem', 'solution', 'tag')
+			target, attribute = self._prompt_by_index(prompt, 'code', permitted_actions, tmpfile)
 		
-			self._original_body['problem'] = target[1]
-			print self._original_body	
-			if attribute != 'code':
-				self._original_body['attribute'] = attribute
-				return update_content(self._original_body, database=self._database) 
+			self.body_state['problem'] = target[1]
+
+			if attribute == 'tag':
+				self.update_tag_for_dict()
+			elif attribute != 'code':
+				self.body_state['attribute'] = attribute
+				return update_content(self.body_state, database=self._database) 
 			else:
 				code_of_target = target[len(target)-1]
 				if not code_of_target:
 					code_of_target = " "
-				return process_code_adding(self._original_body, 
+				return process_code_adding(self.body_state, 
 				code_of_target=code_of_target, database=self._database)
 
+	def update_tag_for_dict(self):
+		"""Retrieves set tags for a certain dict value first, displays them
+		and processes input (add or delete tags)
+		"""
+
+		all_tags = self._database.get_tags(self.body_state)	
+
+		print "Following tabs are set for problem '{0}'".format(self.body_state['problem'])
+		for tag in all_tags:
+			print " - ", tag
+
+		tag_input = ""
+		while not (tag_input.startswith('+') or tag_input.startswith('-')):  
+			tag_input = process_and_validate_input("Add or remove a tag with '+'TAGNAME or '-' TAGNAME")
+
+		self.body_state['tag_name'] = tag_input[1:]
+		if tag_input[0] == '+':
+			self._database.update_tags(self.body_state, 'add')
+			print "Adding {0} successful.".format(self.body_state['tag_name'])	
+		else:
+			self._database.update_tags(self.body_state, 'del')
+			print "Deleting {0} successful.".format(self.body_state['tag_name'])	
+		sys.exit(0)
 
 	def _link_determine_operation(self, target, attribute):
 		"""Determines what operation to do on link table
@@ -692,8 +730,8 @@ class State(object):
 
 		# default - run link in webbrowser
 		if attribute == 'link':
-			self._original_body['link_name'] = target[1]
-			link_url = self._database.retrieve_links(self._original_body, 'open')
+			self.body_state['link_name'] = target[1]
+			link_url = self._database.retrieve_links(self.body_state, 'open')
 			if link_url:
 				requested_url = link_url[0]
 				if not requested_url.startswith('http'):
@@ -705,23 +743,30 @@ class State(object):
 				sys.exit(0)
 
 		elif attribute == 'del':
-			self._original_body['url'] = target[2] 
-			self._database.delete_links(self._original_body)
+			self.body_state['url'] = target[2] 
+			self._database.delete_links(self.body_state)
 			print "Deleting link {0} successfully.".format(target[1].encode('utf-8'))
+			sys.exit(0)
 
-		# bind language to link
+		# language to link
 		elif attribute == 'lang':
-			self._original_body['language'] = process_and_validate_input("Bind "+target[1]+" to language : ")
-			self._original_body['link_name'] = target[1]
-			self._original_body['url'] = target[2]
-			self._original_body['original-lang'] = target[-1]
-			self._database.upsert_links(self._original_body, operation_type='upsert')
-			print "Binding link {0} successfull.".format(self._original_body['link_name'].encode('utf-8'))
-
-		# set description for link
-		else: 
-			print "Error with flags."	
-
+			self.body_state['attribute'] = "language"
+			self.body_state['data'] = process_and_validate_input("Change " 
+				+ self.body_state['attribute']+ "to : ")
+			self.body_state['link_name'] = target[1]
+		else:
+			# attribute = name
+			self.body_state['attribute'] = "name"
+			self.body_state['data'] = process_and_validate_input("Change " 
+				+ self.body_state['attribute']+ "to : ")
+		
+		self.body_state['url'] = target[2]
+		self.body_state['original-lang'] = target[-1]
+		self._database.upsert_links(self.body_state, operation_type='upsert')
+		print "Changing link attribute {0} successfull.".format(
+			self.body_state['attribute'].encode('utf-8'))
+		sys.exit(0)
+	
 ## HELPER
 
 def process_and_validate_input(prompt):
