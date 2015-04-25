@@ -10,8 +10,7 @@ Install () {
     fi
 
     cd ${LOCATION}
-# ! $(md5sum -c checksum.txt | grep md5sum)
-    if [ "1" = "1" ]; then
+    if  [ ! $(md5sum -c checksum.txt | grep md5sum) ]; then
         # installation begins here
         echo "Checksums OK."
         cd ..

@@ -1,5 +1,5 @@
-"""processes the command line args.
-
+"""
+Processes the command line args. --> logic
 """
 
 #relative import
@@ -16,9 +16,7 @@ import os
 import urlparse
 import webbrowser
 
-
 ##GENERAL 
-
 
 def start_process(cmd_line_args):
     """
@@ -119,6 +117,8 @@ def determine_proceeding(body, flags):
         process_file_adding(body)
     elif '-d' in flags:
         determine_display_operation(body, flags)
+    elif '-t' in flags:
+        show_tags(body)
     elif '-a' in flags:
         insert_content()
     elif '-c' in flags:
@@ -571,7 +571,7 @@ def build_table(column_list, all_rows, line_length, args_dict):
 
     all_rows_as_list = []
 
-    field_length = line_length-10/(cl_length)
+    field_length = line_length/(cl_length)
 
     for row in all_rows:
         single_row = list(row)            # row is a tuple and contains db query results.
@@ -689,22 +689,28 @@ class State(object):
 
         all_tags = self._database.get_tags(self.body_state)    
 
-        print "Following tabs are set for problem '{0}'".format(self.body_state['problem'])
-        for tag in all_tags:
-            print " - ", tag
+        if all_tags:
+
+            print "\nFollowing tags are set for problem '{0}' :".format(self.body_state['problem'])
+
+            for tag in all_tags:
+                print "'" + tag[0]+"' ",
+            print ""
+        else:
+            print "\nNo tags set."
 
         tag_input = ""
         while not (tag_input.startswith('+') or tag_input.startswith('-')):  
             tag_input = process_and_validate_input(
-                "Add or remove a tag with '+'TAGNAME or '-' TAGNAME")
+                "Add or remove a tag with '+'TAGNAME or '-'TAGNAME : ")
 
         self.body_state['tag_name'] = tag_input[1:]
         if tag_input[0] == '+':
             self._database.update_tags(self.body_state, 'add')
-            print "Adding {0} successful.".format(self.body_state['tag_name'])    
+            print "Adding tag {0} successful.".format(self.body_state['tag_name'])    
         else:
             self._database.update_tags(self.body_state, 'del')
-            print "Deleting {0} successful.".format(self.body_state['tag_name'])    
+            print "Deleting tag {0} successful.".format(self.body_state['tag_name'])    
         sys.exit(0)
 
     def _link_determine_operation(self, target, attribute):
@@ -818,3 +824,31 @@ def read_and_delete_tmpfile(file_name):
         print "Couldn't delete temporary file." 
 
     return file_output
+
+def show_tags(body):
+    """
+    Prints all tags, which are set for a certain language to console.
+    (Gives option to remove some of them entirely)
+    """
+
+    database = db.Database()
+    all_tags = database.get_tags(body)
+
+    if not all_tags:
+        print "No tags set for language {0}.".format(body['language'])
+    else:
+        print "\nFollowing tags are set for language '{0}' :".format(body['language'])
+
+        for tag in all_tags:
+            print "'" + tag[0]+"' ",
+
+        print ""
+        tag_input = ""
+        while not tag_input.startswith('-'):  
+            tag_input = process_and_validate_input(
+                "Remove a tag entirely with '-'TAGNAME : ")
+
+        body['tag_name'] = tag_input[1:]
+        database.delete_tag(body)
+        print "Deleting tag '{0}'' entirely successful.".format(body['tag_name'])    
+        sys.exit(0)

@@ -8,8 +8,8 @@ Usage:
   codedict -d LANGUAGE [SEARCHPATTERN] [(-t | -l) --hline]
   codedict -f LANGUAGE PATH-TO-FILE [PROBLEM] 
   codedict -c LANGUAGE PROBLEM
-  codedict -a 
-  codedict -t 
+  codedict -a
+  codedict -t LANGUAGE  
   codedict -l URL [LINK_NAME] [LANGUAGE] 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
@@ -45,7 +45,7 @@ import time
 
 if __name__ == '__main__':
 
-    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.9")
+    COMMAND_LINE_ARGS = docopt(__doc__, version="codedict v0.7")
 
     try:
         processor.start_process(COMMAND_LINE_ARGS)

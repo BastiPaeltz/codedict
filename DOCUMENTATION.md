@@ -12,7 +12,7 @@
  **Development Status : 4 - Beta**,  
  **Intended Audience : Developers**,  
  **Topic : Software Development : Assistance tool**,  
- **License : OSI Approved : MIT License**,  
+ **License : MIT License**,  
  **Programming Language : Python : 2.7**
 
 

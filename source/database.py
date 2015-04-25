@@ -1,6 +1,5 @@
-"""Defines the data processing / handling using local sqlite3 database.
-
- 
+"""
+Defines the data processing / handling using local sqlite3 database.
 """
     
 #import from standard library
@@ -16,7 +15,9 @@ class Database(object):
 
     def __init__(self):
         self.db_path = determine_db_path()
-        self._db_instance = establish_db_connection(self.db_path)
+        if not os.path.isdir(self.db_path):
+            os.makedirs(self.db_path)
+        self._db_instance = establish_db_connection(self.db_path+'/codedict_db.DB')
         self._setup_database()
 
     def _setup_database(self):
@@ -48,7 +49,7 @@ class Database(object):
 
                 self._db_instance.execute('''
                     CREATE table IF NOT EXISTS Tags (id INTEGER PRIMARY KEY, 
-                        tags TEXT, language TEXT)
+                        name TEXT, language TEXT)
                 ''')
 
                 self._db_instance.execute('''
@@ -202,18 +203,32 @@ class Database(object):
 
         try:
             with self._db_instance:
+               
+                if 'problem' in values:  
+                    results = self._db_instance.execute(
+                        '''
+                        SELECT name FROM Tags 
+                        INNER JOIN ItemsToTags ON tagID = 
+                        (SELECT tagID from ItemsToTags WHERE dictID = (
+                        SELECT id from Dictionary where language = ? and problem = ?)) WHERE
+                        language = ? 
+                        ''', (values['language'], values['problem'], values['language']))
 
-                results = self._db_instance.execute(
-                    '''
-                    SELECT name FROM Tags WHERE id =
-                    (SELECT tagID from ItemsToTags WHERE dictID = 
-                    (SELECT id from Dictionary where language = ? and problem = ?))     
-                    ''', (values['language'], values['problem']))
-
-                return selected_rows_to_list(results)
+                else: 
+                    results = self._db_instance.execute(
+                        '''
+                        SELECT name FROM Tags 
+                        INNER JOIN ItemsToTags ON tagID = 
+                        (SELECT tagID from ItemsToTags WHERE dictID = (
+                        SELECT id from Dictionary where language = ?)) WHERE
+                        language = ? 
+                        ''', (values['language'], values['language']))
+                
+                return results.fetchall()
 
         except sqlite3.Error as error:
             print " A database error has occured.", error
+            sys.exit(1)
     
     def update_tags(self, values, update_type):
         """
@@ -259,7 +274,7 @@ class Database(object):
                 self._db_instance.execute(
                     '''
                         DELETE from Tags WHERE name = ? AND language = 
-                        (SELECT id from Languages where language = ?)
+                        (SELECT language from Languages where language = ?)
                     ''', (values['tag_name'], values['language']))
         
         except sqlite3.Error as error:
@@ -278,8 +293,8 @@ class Database(object):
                     '''
                     SELECT problem, solution FROM Dictionary WHERE id =
                     (SELECT dictID from ItemsToTags WHERE tagID = 
-                    (SELECT id from Tags where language = ? and tags = ?))     
-                    ''', (body['language'], body['searchpattern']))
+                    (SELECT id from Tags where language = ? and name LIKE ?))     
+                    ''', (body['language'], body['searchpattern']+"%"))
 
                 return selected_rows_to_list(results)
 
@@ -431,8 +446,8 @@ class Database(object):
                     
                     for tag in tags_list:
                         tags_cursor.execute('''
-                        INSERT OR IGNORE INTO Tags (id, tags, language) VALUES (
-                            (SELECT id from Tags WHERE tags = ? and language = ?), 
+                        INSERT OR IGNORE INTO Tags (id, name, language) VALUES (
+                            (SELECT id from Tags WHERE name = ? and language = ?), 
                             ?, (SELECT language from Languages where language = ?))
                         ''', (tag, lang_name, tag, lang_name))
 
@@ -529,7 +544,7 @@ def determine_db_path():
         # The application is not frozen
         datadir = os.path.dirname(__file__)
 
-    return datadir+'/res/codedict_db.DB'
+    return datadir+'/res'
 
 def establish_db_connection(db_path):
     """
