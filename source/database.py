@@ -2,7 +2,7 @@
 
  
 """
-	
+    
 #import from standard library
 import sqlite3
 import sys
@@ -10,558 +10,547 @@ import os
 
 
 class Database(object):
-	"""DB class, handles all connections with the database.
+    """
+    DB class, handles all connections with the database.
+    """ 
 
-	""" 
+    def __init__(self):
+        self.db_path = determine_db_path()
+        self._db_instance = establish_db_connection(self.db_path)
+        self._setup_database()
 
-	def __init__(self):
-		self.db_path = determine_db_path()
-		self._db_instance = establish_db_connection(self.db_path)
-		self._setup_database()
+    def _setup_database(self):
+        """
+        Sets up the database for usage. Exits if connecting to DB or setting up
+        tables fails.
+        """
+        
+        if not self._db_instance:
+            print "Error while reaching DB."
+            sys.exit(1) 
+        
+        if not self._create_tables():
+            print "Error while creating DB tables."
+            sys.exit(1)
 
+    def _create_tables(self):
+        """
+        Creates tables 'dictionary', 'languages', 'links' and 'config' if they not exist.
+        """
 
-	def _setup_database(self):
-		"""Sets up the database for usage. Exits if connecting to DB or setting up
-		tables fails.
-		"""
-		
-		if not self._db_instance:
-			print "Error while reaching DB."
-			sys.exit(1) 
-		
-		if not self._create_tables():
-			print "Error while creating DB tables."
-			sys.exit(1)
+        try:
+            with self._db_instance:
+                # create tables
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
+                        language TEXT UNIQUE, suffix TEXT)
+                ''')
 
- 
-	def _create_tables(self):
-		"""Creates tables 'dictionary', 'languages', 'links' and 'config' if they not exist.
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS Tags (id INTEGER PRIMARY KEY, 
+                        tags TEXT, language TEXT)
+                ''')
 
-		"""
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS ItemsToTags (id INTEGER PRIMARY KEY, 
+                        tagID INTEGER, dictID INTEGER)
+                ''')
+    
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS Dictionary 
+                    (id INTEGER PRIMARY KEY, language TEXT, 
+                        problem TEXT, solution TEXT) 
+                ''')
 
-		try:
-			with self._db_instance:
-				# create tables
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Languages (id INTEGER PRIMARY KEY, 
-						language TEXT UNIQUE, suffix TEXT)
-				''')
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS Config (configItem TEXT PRIMARY KEY, value TEXT)
+                ''')
 
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Tags (id INTEGER PRIMARY KEY, 
-						tags TEXT, language TEXT)
-				''')
+                self._db_instance.execute('''
+                    CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
+                    URL text, language TEXT)
+                ''')
 
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS ItemsToTags (id INTEGER PRIMARY KEY, 
-						tagID INTEGER, dictID INTEGER)
-				''')
-	
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Dictionary 
-					(id INTEGER PRIMARY KEY, language TEXT, 
-						problem TEXT, solution TEXT) 
-				''')
+                return True
 
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Config (configItem TEXT PRIMARY KEY, value TEXT)
-				''')
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            return False
 
-				self._db_instance.execute('''
-					CREATE table IF NOT EXISTS Links (id INTEGER PRIMARY KEY, name TEXT, 
-					URL text, language TEXT)
-				''')
+    def get_config_item(self, config_item):
+        """
+        Gets a config item (editor or line-length) from the Config table.
+        """
 
-				return True
+        try:
+            with self._db_instance:
+                value = self._db_instance.execute('''
+                    SELECT value from Config where configItem = ?
+                ''', (config_item, ))
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			return False
+            return value.fetchone()
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
+    def set_config_item(self, config_item, value):
+        """
+        Sets the editor row in the Config table of the DB.
+        """
 
-	def get_config_item(self, config_item):
-		"""Gets a config item (editor or line-length) from the Config table.
+        try:
+            with self._db_instance:
 
-		"""
+                self._db_instance.execute('''
+                    INSERT or IGNORE INTO Config (configItem, value) VALUES (?, ?)
+                ''', (config_item, value, ))
 
-		try:
-			with self._db_instance:
-				value = self._db_instance.execute('''
-					SELECT value from Config where configItem = ?
-				''', (config_item, ))
+                self._db_instance.execute('''
+                    UPDATE Config SET value = ? WHERE configItem = ?
+                ''', (value, config_item, ))
+            
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-			return value.fetchone()
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+    def retrieve_suffix(self, lang_name):
+        """
+        Retrieves suffix for 1 language from Language table of the DB. 
+        """
 
+        try:
+            with self._db_instance:
 
-	def set_config_item(self, config_item, value):
-		"""Sets the editor row in the Config table of the DB.
+                suffix = self._db_instance.execute('''
+                    SELECT suffix from Languages where language = ?
+                ''', (lang_name, ))
 
-		"""
+            return suffix.fetchone()
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-		try:
-			with self._db_instance:
+    def set_suffix(self, lang_name, suffix):
+        """
+        Inserts suffix for 1 language into the DB.
+        """
+    
+        try:
+            with self._db_instance:
+                self._db_instance.execute('''
+                    UPDATE Languages SET suffix = ? WHERE language = ?
+                ''', (suffix, lang_name, ))
 
-				self._db_instance.execute('''
-					INSERT or IGNORE INTO Config (configItem, value) VALUES (?, ?)
-				''', (config_item, value, ))
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-				self._db_instance.execute('''
-					UPDATE Config SET value = ? WHERE configItem = ?
-				''', (value, config_item, ))
-			
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+    def delete_content(self, values):
+        """
+        Deletes content from the Dictionary table, language and problem field 
+        have to match the rows values.
+        """
 
-	def retrieve_suffix(self, lang_name):
-		"""Retrieves suffix for 1 language from Language table of the DB. 
+        try:
+            with self._db_instance:
+                
+                self._db_instance.execute('''
+                    DELETE from Dictionary WHERE problem = ? AND language = 
+                    (SELECT language from Languages where language = ?)
+                ''', (values['problem'], values['language']))
+                
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-		"""
+    def update_content(self, values):
+        """
+        Updates content of the DB, not insert! Only for values whcih already exist.
+        """    
 
-		try:
-			with self._db_instance:
+        try:
+            with self._db_instance:
+                # update database
 
-				suffix = self._db_instance.execute('''
-					SELECT suffix from Languages where language = ?
-				''', (lang_name, ))
+                if values['attribute'] != 'link':
+                    self._db_instance.execute('''
+                        UPDATE Dictionary SET {0} = ? WHERE problem = ? AND language = 
+                        (SELECT language from Languages where language = ?)
+                    '''.format(values['attribute']), 
+                    (values['data'], 
+                    values['problem'],
+                    values['language']))
+                else:
+                    self._db_instance.execute('''
+                        UPDATE Links SET {0} = ? WHERE problem = ? AND language = 
+                        (SELECT id from Languages where language = ?)
+                    '''.format(values['attribute']), 
+                    (values['data'], 
+                    values['problem'],
+                    values['language']))
 
-			return suffix.fetchone()
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
-
-
-	def set_suffix(self, lang_name, suffix):
-		"""Inserts suffix for 1 language into the DB.
-
-		"""
-	
-		try:
-			with self._db_instance:
-				self._db_instance.execute('''
-					UPDATE Languages SET suffix = ? WHERE language = ?
-				''', (suffix, lang_name, ))
-
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
-
-
-	def delete_content(self, values):
-		"""Deletes content from the Dictionary table, language and problem field 
-		have to match the rows values.
-		"""
-
-		try:
-			with self._db_instance:
-				
-				self._db_instance.execute('''
-					DELETE from Dictionary WHERE problem = ? AND language = 
-					(SELECT language from Languages where language = ?)
-				''', (values['problem'], values['language']))
-				
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
-
-
-	def update_content(self, values):
-		"""Updates content of the DB, not insert! Only for values whcih already exist.
-		"""	
-
-		try:
-			with self._db_instance:
-				# update database
-
-				if values['attribute'] != 'link':
-					self._db_instance.execute('''
-						UPDATE Dictionary SET {0} = ? WHERE problem = ? AND language = 
-						(SELECT language from Languages where language = ?)
-					'''.format(values['attribute']), 
-					(values['data'], 
-					values['problem'],
-					values['language']))
-				else:
-					self._db_instance.execute('''
-						UPDATE Links SET {0} = ? WHERE problem = ? AND language = 
-						(SELECT id from Languages where language = ?)
-					'''.format(values['attribute']), 
-					(values['data'], 
-					values['problem'],
-					values['language']))
-
-
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
 ### Tags
 
-	def get_tags(self, values):
-		"""Retrieves / gets tags from DB.
+    def get_tags(self, values):
+        """
+        Retrieves / gets tags from DB.
+        """
 
-		"""
+        try:
+            with self._db_instance:
 
-		try:
-			with self._db_instance:
+                results = self._db_instance.execute(
+                    '''
+                    SELECT name FROM Tags WHERE id =
+                    (SELECT tagID from ItemsToTags WHERE dictID = 
+                    (SELECT id from Dictionary where language = ? and problem = ?))     
+                    ''', (values['language'], values['problem']))
 
-				results = self._db_instance.execute(
-					'''
-					SELECT name FROM Tags WHERE id =
-					(SELECT tagID from ItemsToTags WHERE dictID = 
-					(SELECT id from Dictionary where language = ? and problem = ?)) 	
-					''', (values['language'], values['problem']))
+                return selected_rows_to_list(results)
 
-				return selected_rows_to_list(results)
+        except sqlite3.Error as error:
+            print " A database error has occured.", error
+    
+    def update_tags(self, values, update_type):
+        """
+        Updates the tag field of item (link or dict)
+        """
 
-		except sqlite3.Error as error:
-			print " A database error has occured.", error
+        try:
+            with self._db_instance:
+                if update_type == 'add':
+                    self._db_instance.execute('''
+                        INSERT or IGNORE into Tags (name, language)
+                        VALUES (?, ?)
+                    ''', (values['tag_name'], values['language']))
 
-	
-	def update_tags(self, values, update_type):
-		"""Updates the tag field of item (link or dict)
+                    self._db_instance.execute('''
+                        INSERT or REPLACE into ItemsToTags (tagID, dictID)
+                        VALUES (
+                        (SELECT id from Tags WHERE name = ? AND language = ?),
+                        (SELECT id from Dictionary WHERE problem = ? and language = ?)
+                        )''', 
+                    (values['tag_name'], values['language'], values['problem'], values['language']))
 
-		"""
+                #update_type = delete 
+                else:
+                    self._db_instance.execute('''
+                        DELETE from ItemsToTags WHERE dictID = 
+                        (SELECT id from Dictionary WHERE problem = ? and language = ?) 
+                        AND tagID = (SELECT id from Tags WHERE name = ? AND language = ?)    
+                    ''', 
+                    (values['problem'], values['language'], values['tag_name'], values['language']))
 
-		try:
-			with self._db_instance:
-				if update_type == 'add':
-					self._db_instance.execute('''
-						INSERT or IGNORE into Tags (name, language)
-						VALUES (?, ?)
-					''', (values['tag_name'], values['language']))
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-					self._db_instance.execute('''
-						INSERT or REPLACE into ItemsToTags (tagID, dictID)
-						VALUES (
-						(SELECT id from Tags WHERE name = ? AND language = ?),
-						(SELECT id from Dictionary WHERE problem = ? and language = ?)
-						)
-					''', (values['tag_name'], values['language'], values['problem'], values['language']))
+    def delete_tag(self, values):
+        """
+        Deletes the tag and all associated items (link or dict).
+        """
 
-				#update_type = delete 
-				else:
-					self._db_instance.execute('''
-						DELETE from ItemsToTags WHERE dictID = 
-						(SELECT id from Dictionary WHERE problem = ? and language = ?) 
-						AND tagID = (SELECT id from Tags WHERE name = ? AND language = ?)	
-					''', (values['problem'], values['language'], values['tag_name'], values['language']))
+        try:
+            with self._db_instance:
+                self._db_instance.execute(
+                    '''
+                        DELETE from Tags WHERE name = ? AND language = 
+                        (SELECT id from Languages where language = ?)
+                    ''', (values['tag_name'], values['language']))
+        
+        except sqlite3.Error as error:
+            print "A database error has occured ", error
+            sys.exit(1)
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+    def retrieve_dict_per_tags(self, body):
+        """
+        Retrieves dict content based on tags.
+        """
 
-	def delete_tag(self, values):
-		"""Deletes the tag and all associated items (link or dict).
+        try:
+            with self._db_instance:
+                
+                results = self._db_instance.execute(
+                    '''
+                    SELECT problem, solution FROM Dictionary WHERE id =
+                    (SELECT dictID from ItemsToTags WHERE tagID = 
+                    (SELECT id from Tags where language = ? and tags = ?))     
+                    ''', (body['language'], body['searchpattern']))
 
-		"""
+                return selected_rows_to_list(results)
 
-		try:
-			with self._db_instance:
-				self._db_instance.execute(
-					'''
-						DELETE from Tags WHERE name = ? AND language = 
-						(SELECT id from Languages where language = ?)
-					''', (values['tag_name'], values['language']))
-		
-		except sqlite3.Error as error:
-			print "A database error has occured ", error
-			sys.exit(1)
-
-
-	def retrieve_dict_per_tags(self, body):
-		"""Retrieves dict content based on tags.
-
-		"""
-
-		try:
-			with self._db_instance:
-				
-				results = self._db_instance.execute(
-					'''
-					SELECT problem, solution FROM Dictionary WHERE id =
-					(SELECT dictID from ItemsToTags WHERE tagID = 
-					(SELECT id from Tags where language = ? and tags = ?)) 	
-					''', (body['language'], body['searchpattern']))
-
-				return selected_rows_to_list(results)
-
-		except sqlite3.Error as error:
-			print "A database error has occured ", error
-			sys.exit(1)
+        except sqlite3.Error as error:
+            print "A database error has occured ", error
+            sys.exit(1)
 
 ### LINKS
 
-	def upsert_links(self, values, operation_type='add'):
-		"""Upserts (insert or update if exists) links into Link table.
+    def upsert_links(self, values, operation_type='add'):
+        """
+        Upserts (insert or update if exists) links into Link table.
+        """
 
-		"""
+        try:
+            with self._db_instance:
 
-		try:
-			with self._db_instance:
+                # add link to Links db if not exists
+                self._db_instance.execute('''
+                    INSERT OR IGNORE INTO Links (id, name, url, language) VALUES 
+                    ((SELECT id from Links WHERE name = ? AND language = ?), ?, ?, ?)
+                ''', (values['link_name'], values['original-lang'], values['link_name'],
+                    values['url'], values['language']))
+                
+                if operation_type == 'upsert':
+                
+                    self._db_instance.execute('''
+                        UPDATE Links SET {0} = ? WHERE name = ? AND url = ? AND language = ?
+                    '''.format(values['attribute']), (values['data'], values['link_name'], 
+                        values['url'], values['original-lang']))
 
-				# add link to Links db if not exists
-				self._db_instance.execute('''
-					INSERT OR IGNORE INTO Links (id, name, url, language) VALUES 
-					((SELECT id from Links WHERE name = ? AND language = ?), ?, ?, ?)
-				''', (values['link_name'], values['original-lang'], values['link_name'],
-					values['url'], values['language']))
-				
-				if operation_type == 'upsert':
-				
-					self._db_instance.execute('''
-						UPDATE Links SET {0} = ? WHERE name = ? AND url = ? AND language = ?
-					'''.format(values['attribute']), (values['data'], values['link_name'], 
-						values['url'], values['original-lang']))
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+    def delete_links(self, values):
+        """
+        Deletes links from Link table.
+        """
 
-	def delete_links(self, values):
-		"""Deletes links from Link table.
+        try:
+            with self._db_instance:
+                self._db_instance.execute('''
+                    DELETE from Links WHERE url = ? 
+                ''', (values['url'], ))
+                
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-		"""
+    def retrieve_links(self, values, selection_type):
+        """
+        Retrieves links into Link table.
+        """
+        try:
+            with self._db_instance:
+                if selection_type == 'open':
 
-		try:
-			with self._db_instance:
-				self._db_instance.execute('''
-					DELETE from Links WHERE url = ? 
-				''', (values['url'], ))
-				
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+                    selection = self._db_instance.execute('''
+                        SELECT url from Links WHERE name LIKE ? 
+                    ''', (values['searchpattern']+'%', )) 
+                    return selection.fetchone()
 
+                else: # display 
 
-	def retrieve_links(self, values, selection_type):
-		"""Retrieves links into Link table.
+                    if selection_type == 'display':
+                        selection = self._db_instance.execute('''
+                            SELECT name, url, language from Links WHERE name LIKE ?
+                        ''', (values['searchpattern']+'%', )) 
 
-		"""
-		try:
-			with self._db_instance:
-				if selection_type == 'open':
-
-					selection = self._db_instance.execute('''
-						SELECT url from Links WHERE name LIKE ? 
-					''', (values['searchpattern']+'%', )) 
-					return selection.fetchone()
-
-				else: # display 
-
-					if selection_type == 'display':
-						selection = self._db_instance.execute('''
-							SELECT name, url, language from Links WHERE name LIKE ?
-						''', (values['searchpattern']+'%', )) 
-
-					elif selection_type == 'lang-display': # lang display
-						selection = self._db_instance.execute('''
-							SELECT name, url from Links WHERE name LIKE ?
-							AND language = ? 
-						''', (values['searchpattern']+'%', values['language']))
-
-
-					selection_list = selected_rows_to_list(selection)
-					return selection_list
-
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+                    elif selection_type == 'lang-display': # lang display
+                        selection = self._db_instance.execute('''
+                            SELECT name, url from Links WHERE name LIKE ?
+                            AND language = ? 
+                        ''', (values['searchpattern']+'%', values['language']))
 
 
-	def upsert_solution(self, values):
-		"""Upserts (insert or update if exists) code into the DB. 
-		"""
+                    selection_list = selected_rows_to_list(selection)
+                    return selection_list
 
-		try:
-			with self._db_instance:
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
+    def upsert_solution(self, values):
+        """
+        Upserts (insert or update if exists) code into the DB. 
+        """
 
-				#add language to lang db if not exists
-				self._db_instance.execute('''
-					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
-				''', (values['language'], ))
-				
-				self._db_instance.execute('''
-					UPDATE Dictionary SET solution = ? WHERE problem = ? AND language = 
-					(SELECT language from Languages where language = ?)
-					''', (values['data'], 
-					values['problem'],
-					values['language']))
-				
-				self._db_instance.execute('''
-					INSERT or IGNORE into Dictionary (id, language, problem, solution)
-					VALUES((SELECT id from Dictionary where problem = ? AND language = 
-					(SELECT language from Languages where language = ?)) 
-					,(SELECT language from Languages where language = ?), ?, ?)
-				''', (values['problem'],
-					values['language'], 
-					values['language'], 
-					values['problem'], 
-					values['data']))
+        try:
+            with self._db_instance:
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+                #add language to lang db if not exists
+                self._db_instance.execute('''
+                    INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+                ''', (values['language'], ))
+                
+                self._db_instance.execute('''
+                    UPDATE Dictionary SET solution = ? WHERE problem = ? AND language = 
+                    (SELECT language from Languages where language = ?)
+                    ''', (values['data'], 
+                    values['problem'],
+                    values['language']))
+                
+                self._db_instance.execute('''
+                    INSERT or IGNORE into Dictionary (id, language, problem, solution)
+                    VALUES((SELECT id from Dictionary where problem = ? AND language = 
+                    (SELECT language from Languages where language = ?)) 
+                    ,(SELECT language from Languages where language = ?), ?, ?)
+                ''', (values['problem'],
+                    values['language'], 
+                    values['language'], 
+                    values['problem'], 
+                    values['data']))
 
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-	def add_content(self, values, lang_name):
-		"""Adds content to the database. Tries to insert and updates if 
-		row already exists.
-		"""
-		
-		try:
-			with self._db_instance:
-				dict_cursor = self._db_instance.cursor()
-				tags_cursor = self._db_instance.cursor()			
-				#add language to lang db if not exists
-				self._db_instance.execute('''
-					INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
-				''', (lang_name, ))
-				
-				for new_row in values:
+    def add_content(self, values, lang_name):
+        """
+        Adds content to the database. Tries to insert and updates if 
+        row already exists.
+        """
+        
+        try:
+            with self._db_instance:
+                dict_cursor = self._db_instance.cursor()
+                tags_cursor = self._db_instance.cursor()            
+                #add language to lang db if not exists
+                self._db_instance.execute('''
+                    INSERT OR IGNORE INTO Languages (language, suffix) VALUES (?, "")
+                ''', (lang_name, ))
+                
+                for new_row in values:
 
-					dict_cursor.execute('''
-						INSERT or REPLACE into Dictionary 
-						(id, language, problem, solution)
-						VALUES((SELECT id from Dictionary where problem = ? AND language = 
-						(SELECT language from Languages where language = ?)), 
-						(SELECT language from Languages where language = ?), ?, 
-						COALESCE((SELECT solution from Dictionary where problem = ? AND language = 
-						(SELECT language from Languages where language = ?)), ?))
-					''', (new_row[1], lang_name, lang_name, new_row[1], 
-						new_row[1], lang_name, new_row[2]))
+                    dict_cursor.execute('''
+                        INSERT or REPLACE into Dictionary 
+                        (id, language, problem, solution)
+                        VALUES((SELECT id from Dictionary where problem = ? AND language = 
+                        (SELECT language from Languages where language = ?)), 
+                        (SELECT language from Languages where language = ?), ?, 
+                        COALESCE((SELECT solution from Dictionary where problem = ? AND language = 
+                        (SELECT language from Languages where language = ?)), ?))
+                    ''', (new_row[1], lang_name, lang_name, new_row[1], 
+                        new_row[1], lang_name, new_row[2]))
 
-					tags_list = process_input_tags(new_row[0])
-					
-					for tag in tags_list:
-						tags_cursor.execute('''
-						INSERT OR IGNORE INTO Tags (id, tags, language) VALUES (
-							(SELECT id from Tags WHERE tags = ? and language = ?), 
-							?, (SELECT language from Languages where language = ?))
-						''', (tag, lang_name, tag, lang_name))
+                    tags_list = process_input_tags(new_row[0])
+                    
+                    for tag in tags_list:
+                        tags_cursor.execute('''
+                        INSERT OR IGNORE INTO Tags (id, tags, language) VALUES (
+                            (SELECT id from Tags WHERE tags = ? and language = ?), 
+                            ?, (SELECT language from Languages where language = ?))
+                        ''', (tag, lang_name, tag, lang_name))
 
-						tag_id = tags_cursor.lastrowid
-						dict_id = dict_cursor.lastrowid
+                        tag_id = tags_cursor.lastrowid
+                        dict_id = dict_cursor.lastrowid
 
-						self._db_instance.execute('''
-							INSERT OR IGNORE into ItemsToTags (tagID, dictID) VALUES (?, ?)
-						''', (tag_id, dict_id))
+                        self._db_instance.execute('''
+                            INSERT OR IGNORE into ItemsToTags (tagID, dictID) VALUES (?, ?)
+                        ''', (tag_id, dict_id))
 
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
+    def retrieve_content(self, location, selection_type):
+        """
+        Retrieves content, packs them in indexed tuples if needed
+        and sends results back to calling function.
+        """
+        
+        db_selection = self._select_from_db(location, selection_type)
+        if not selection_type == "code":    
+            selection_result = selected_rows_to_list(db_selection)
+        else:
+            selection_result = db_selection.fetchone()
+        return selection_result         # returns False if no rows were selected            
 
+    def _select_from_db(self, location, selection_type):
+        """
+        Selects from DB. Runs correct query.
+        """
+        
+        if selection_type not in ('language', 'basic', 'code'):
+            print "DB received no valid selection type."
+            sys.exit(1)
 
-	def retrieve_content(self, location, selection_type):
-		"""Retrieves content, packs them in indexed tuples if needed
-		and sends results back to calling function.
-		"""
-		
-		db_selection = self._select_from_db(location, selection_type)
-		if not selection_type == "code":	
-			selection_result = selected_rows_to_list(db_selection)
-		else:
-			selection_result = db_selection.fetchone()
-		return selection_result 		# returns False if no rows were selected			
-
-
-	def _select_from_db(self, location, selection_type):
-		"""Selects from DB. Runs correct query.
-
-		"""
-		
-		if selection_type not in ('language', 'basic', 'code'):
-			print "DB received no valid selection type."
-			sys.exit(1)
-
-		try:
-			with self._db_instance:
-			
-				if selection_type == "basic":
-			
-					selection = self._db_instance.execute('''
-						SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
-						(SELECT language from Languages where language = ?) 
-					''', (location['problem']+'%', location['language']))
-
-
-				elif selection_type == "language":
-
-					selection = self._db_instance.execute('''
-						SELECT problem, solution FROM Dictionary WHERE language = 
-						(SELECT language from Languages where language = ?) 
-					''', (location['language'], ))
+        try:
+            with self._db_instance:
+            
+                if selection_type == "basic":
+            
+                    selection = self._db_instance.execute('''
+                        SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
+                        (SELECT language from Languages where language = ?) 
+                    ''', (location['problem']+'%', location['language']))
 
 
-				elif selection_type == "code":
+                elif selection_type == "language":
 
-					selection = self._db_instance.execute('''
-						SELECT solution FROM Dictionary WHERE problem = ? and language = 
-						(SELECT language from Languages where language = ?)
-						''', (location['problem'], location['language']))
+                    selection = self._db_instance.execute('''
+                        SELECT problem, solution FROM Dictionary WHERE language = 
+                        (SELECT language from Languages where language = ?) 
+                    ''', (location['language'], ))
 
 
-				return selection
+                elif selection_type == "code":
 
-		except sqlite3.Error as error:
-			print "A database error has occured: ", error
-			sys.exit(1)
-		
+                    selection = self._db_instance.execute('''
+                        SELECT solution FROM Dictionary WHERE problem = ? and language = 
+                        (SELECT language from Languages where language = ?)
+                        ''', (location['problem'], location['language']))
 
+
+                return selection
+
+        except sqlite3.Error as error:
+            print "A database error has occured: ", error
+            sys.exit(1)
+        
 def selected_rows_to_list(all_rows):
-	"""Packs all results from a SELECT statement into a list of tuples 
-	with index attached (at first position).	
-	"""
+    """
+    Packs all results from a SELECT statement into a list of tuples 
+    with index attached (at first position).    
+    """
 
-	result_list = []
-	for count, row in enumerate(all_rows):
-		result_list.append((count+1, )+ row)
-	if result_list:
-		return result_list
-	else:
-		return False
-
+    result_list = []
+    for count, row in enumerate(all_rows):
+        result_list.append((count+1, )+ row)
+    if result_list:
+        return result_list
+    else:
+        return False
 
 def determine_db_path():
-	"""Determines where the DB file is located. If executable is frozen the location 
-	differentiates.
-	"""
+    """
+    Determines where the DB file is located. If executable is frozen the location 
+    differentiates.
+    """
 
-	if getattr(sys, 'frozen', False):
-		# The application is frozen
-		datadir = os.path.dirname(sys.executable)
-	else:
-		# The application is not frozen
-		datadir = os.path.dirname(__file__)
+    if getattr(sys, 'frozen', False):
+        # The application is frozen
+        datadir = os.path.dirname(sys.executable)
+    else:
+        # The application is not frozen
+        datadir = os.path.dirname(__file__)
 
-	return datadir+'/res/codedict_db.DB'
-
+    return datadir+'/res/codedict_db.DB'
 
 def establish_db_connection(db_path):
-	"""Establishes the connection to the DB.
+    """
+    Establishes the connection to the DB.
+    """
 
-	"""
-
-	try:
-		return sqlite3.connect(db_path)
-		
-	except sqlite3.Error as error:
-		print "A database error has occured: ", error
-		return False
+    try:
+        return sqlite3.connect(db_path)
+        
+    except sqlite3.Error as error:
+        print "A database error has occured: ", error
+        return False
 
 def process_input_tags(all_tags):
-	"""Gets input for the tags field, validates them and returns all.
+    """
+    Gets input for the tags field, validates them and returns all.
+    """
 
-	"""
-
-	if ";" in all_tags:
-		tag_list = all_tags.split(";")
-	else:
-		tag_list = all_tags
-	return tag_list
+    if ";" in all_tags:
+        tag_list = all_tags.split(";")
+    else:
+        tag_list = all_tags
+    return tag_list
 

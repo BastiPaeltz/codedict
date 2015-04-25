@@ -9,6 +9,7 @@ Usage:
   codedict -f LANGUAGE PATH-TO-FILE [PROBLEM] 
   codedict -c LANGUAGE PROBLEM
   codedict -a 
+  codedict -t 
   codedict -l URL [LINK_NAME] [LANGUAGE] 
   codedict LANGUAGE --suffix SUFFIX
   codedict --editor EDITOR
@@ -35,9 +36,7 @@ Options:
   --help        Show this screen.  
   --version     Show version.
 
-
 """
-
 
 #relative import
 from lib.docopt import docopt 
