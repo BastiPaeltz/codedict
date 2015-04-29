@@ -31,7 +31,7 @@ Install () {
         esac
 
 
-        EXECTEXT='#!/bin/sh \n \n'$ABSOLUTE_PATH' $@'
+        EXECTEXT='#!/bin/sh \n \n'${ABSOLUTE_PATH}' $@'
 
         case "$3" in
             */) ABSOLUTE_PATH=""$2"codedict";;

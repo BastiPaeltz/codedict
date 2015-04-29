@@ -1,9 +1,9 @@
 #!/usr/bin/python
+"""
 
-""" 
 Let's you compile and access your own personal dictionary 
 for programming via the command line with ease.
-
+ 
 Usage:
   codedict -d LANGUAGE [SEARCHPATTERN] [(-t | -l) --hline]
   codedict -f LANGUAGE PATH-TO-FILE [PROBLEM] 
@@ -15,6 +15,7 @@ Usage:
   codedict --editor EDITOR
   codedict --wait (off | on)
   codedict --line INTEGER
+  codedict --rollback "I AM SURE"
 
 Options:
 
@@ -25,23 +26,26 @@ Options:
   -l          Open, display or add links.
   -t          Display or add tags.
 
-  --editor      Sets your editor to the specified value. This has to be an executable.
-  --line        Sets the line length. The output table gets formated based on this value. 
-                Should match your console's line length. Default value: 80
+  --editor      Sets your editor to the specified value. 
+                This has to be an executable.
+  --line        Sets the line length. The output table gets formated 
+                based on this value. Should match your console's line length. 
+                Default value: 80
   --suffix      Sets the suffix for the specified language to the given value. 
                 This is convenient for syntax highlighting inside editors.  
-  --hline       Prints a horizontal line between each row of the output table. 
-  --wait        This is needed on certain editors. See the troubleshooting section on GitHub.  
-
+  --hline       Doesn't print horizontal line between each row of output table. 
+  --wait        This is needed on certain editors. 
+                See the troubleshooting section on GitHub.  
+  --rollback    Rolls database back to moment right before your last file adding
+                Note: You have to double quote (like ""TEXT"") the text.     
   --help        Show this screen.  
   --version     Show version.
 
 """
 
-#relative import
-from lib.docopt import docopt 
-import processor 
-import time
+# relative import
+from lib.docopt import docopt
+import processor
 
 if __name__ == '__main__':
 
