@@ -1,6 +1,9 @@
 """
-Processes the command line args. --> logic
+Processes the command line args.
 """
+
+# emacs shortcuts in raw_input
+import readline
 
 # relative import
 import database as db
@@ -365,7 +368,7 @@ def process_file_adding(body):
     else:
         all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|',
                                   file_text, re.UNICODE))
-        database.add_content(all_matches, body['language'])
+        database.add_content(all_matches, body['language'], insert_type="from_file")
     print "\nUpdating your codedict from file successfully."
 
 
@@ -421,7 +424,7 @@ def run_webbrowser(url):
     Runs the url in the webbrowser (and surpresses output).
     """
 
-    print "Opening your browser"
+    print "Opening your browser."
     # needed for surpressing error messages in console when opening browser
     os.close(2)
     os.close(1)
@@ -740,18 +743,17 @@ class State(object):
         # language to link
         elif attribute == 'lang':
             self.body_state['attribute'] = "language"
-            self.body_state['data'] = process_and_validate_input("Change "
-                                                                 + self.body_state['attribute'] + " to : ")
+            self.body_state['data'] = process_and_validate_input("Change "+ 
+                self.body_state['attribute'] + " to : ")
         else:
             # attribute = name
             self.body_state['attribute'] = "name"
-            self.body_state['data'] = process_and_validate_input("Change "
-                                                                 + self.body_state['attribute'] + " to : ")
+            self.body_state['data'] = process_and_validate_input("Change "+ 
+                self.body_state['attribute'] + " to : ")
 
         self.body_state['link_name'] = target[1]
         self.body_state['url'] = target[2]
         self.body_state['original-lang'] = target[-1]
-        print self.body_state
         self._database.upsert_links(self.body_state, operation_type='upsert')
         print "Changing link attribute {0} successful.".format(
             self.body_state['attribute'].encode('utf-8'))

@@ -17,6 +17,7 @@ class Database(object):
     def __init__(self):
         self.db_path = determine_db_path()
         if not os.path.isdir(self.db_path):
+            print "Building database."
             os.makedirs(self.db_path)
         self._db_instance = establish_db_connection(self.db_path + '/codedict_db.DB')
         self._setup_database()
@@ -85,7 +86,7 @@ class Database(object):
         """
 
         try:
-            shutil.copy(self.db_path + "/BACKUP_codedict_db.DB", self.db_path + "/codedict_db.DB")
+            shutil.copy2(self.db_path + "/BACKUP_codedict_db.DB", self.db_path + "/codedict_db.DB")
         except (shutil.Error, IOError, OSError) as error:
             print "Error while rolling back database.\n", error
             sys.exit(1)
@@ -190,17 +191,17 @@ class Database(object):
                         UPDATE Dictionary SET {0} = ? WHERE problem = ? AND language = 
                         (SELECT language from Languages where language = ?)
                     '''.format(values['attribute']),
-                                              (values['data'],
-                                               values['problem'],
-                                               values['language']))
+                        (values['data'],
+                         values['problem'],
+                         values['language']))
                 else:
                     self._db_instance.execute('''
                         UPDATE Links SET {0} = ? WHERE problem = ? AND language = 
                         (SELECT id from Languages where language = ?)
                     '''.format(values['attribute']),
-                                              (values['data'],
-                                               values['problem'],
-                                               values['language']))
+                        (values['data'],
+                         values['problem'],
+                         values['language']))
 
         except sqlite3.Error as error:
             print "A database error has ocurred: ", error
@@ -219,21 +220,18 @@ class Database(object):
                 if 'problem' in values:
                     results = self._db_instance.execute(
                         '''
-                        SELECT name, language, dictID FROM Tags 
-                        INNER JOIN ItemsToTags ON Tags.id = ItemsToTags.tagID WHERE dictID = (
-                        SELECT id from Dictionary where language = ? and problem = ?) 
+                        SELECT name FROM Tags 
+                        INNER JOIN ItemsToTags ON Tags.id = ItemsToTags.tagID 
+                        WHERE dictID = (SELECT id from Dictionary where language = ? 
+                            and problem = ?) 
                         and language = ? 
                         ''', (values['language'], values['problem'], values['language']))
 
                 else:
                     results = self._db_instance.execute(
                         '''
-                        SELECT name FROM Tags 
-                        INNER JOIN ItemsToTags ON tagID = 
-                        (SELECT tagID from ItemsToTags WHERE dictID = (
-                        SELECT id from Dictionary where language = ?)) WHERE
-                        language = ? 
-                        ''', (values['language'], values['language']))
+                        SELECT name FROM Tags where language = ?  
+                        ''', (values['language'], ))
 
                 return results.fetchall()
 
@@ -259,9 +257,8 @@ class Database(object):
                         VALUES (
                         (SELECT id from Tags WHERE name = ? AND language = ?),
                         (SELECT id from Dictionary WHERE problem = ? and language = ?)
-                        )''',
-                                              (values['tag_name'], values['language'], values['problem'],
-                                               values['language']))
+                        )''', (values['tag_name'], values['language'], 
+                        values['problem'], values['language']))
 
                 #update_type = delete 
                 else:
@@ -269,9 +266,8 @@ class Database(object):
                         DELETE from ItemsToTags WHERE dictID = 
                         (SELECT id from Dictionary WHERE problem = ? and language = ?) 
                         AND tagID = (SELECT id from Tags WHERE name = ? AND language = ?)    
-                    ''',
-                                              (values['problem'], values['language'], values['tag_name'],
-                                               values['language']))
+                    ''', (values['problem'], values['language'], 
+                        values['tag_name'], values['language']))
 
         except sqlite3.Error as error:
             print "A database error has ocurred: ", error
@@ -294,7 +290,7 @@ class Database(object):
             print "A database error has ocurred ", error
             sys.exit(1)
 
-    def retrieve_dict_per_tags(self, body):
+    def retrieve_dict_per_tags(self, values):
         """
         Retrieves dict content based on tags.
         """
@@ -304,10 +300,11 @@ class Database(object):
 
                 results = self._db_instance.execute(
                     '''
-                    SELECT problem, solution FROM Dictionary WHERE id =
-                    (SELECT dictID from ItemsToTags WHERE tagID = 
-                    (SELECT id from Tags where language = ? and name LIKE ?))     
-                    ''', (body['language'], body['searchpattern'] + "%"))
+                    SELECT problem, solution FROM Dictionary 
+                    INNER JOIN ItemsToTags On Dictionary.id = ItemsToTags.dictID
+                    INNER JOIN Tags On ItemsToTags.tagID = Tags.id
+                    WHERE Tags.language=? and name LIKE ?      
+                    ''', (values['language'], values['searchpattern'] + '%'))
 
                 return selected_rows_to_list(results)
 
@@ -367,7 +364,7 @@ class Database(object):
 
                     selection = self._db_instance.execute('''
                         SELECT url from Links WHERE name = ? AND language = ? 
-                    ''', (values['searchpattern'] + '%', ))
+                    ''', (values['searchpattern'], values['language']))
                     return selection.fetchone()
 
                 else:  # display
@@ -425,18 +422,21 @@ class Database(object):
             print "A database error has ocurred: ", error
             sys.exit(1)
 
-    def add_content(self, values, lang_name):
+    def add_content(self, values, lang_name, insert_type="normal"):
         """
         Adds content to the database. Tries to insert and updates if 
         row already exists.
         """
 
         # backup database file 
-        try:
-            shutil.copy(self.db_path + "/codedict_db.DB", self.db_path + "/BACKUP_codedict_db.DB")
-        except (shutil.Error, IOError, OSError) as error:
-            print "Error while backing up database.", error
-            print "Continuing ..."
+        if insert_type == "from_file":
+            try:
+                shutil.copy2(self.db_path + "/codedict_db.DB", 
+                    self.db_path + "/BACKUP_codedict_db.DB")
+            except (shutil.Error, IOError, OSError) as error:
+                print "Error while backing up database.", error
+                print "Continuing ..."
+
         try:
             with self._db_instance:
                 dict_cursor = self._db_instance.cursor()
@@ -457,21 +457,21 @@ class Database(object):
                     ''', (new_row[1], lang_name, lang_name, new_row[1], new_row[2]))
 
                     tags_list = process_input_tags(new_row[0])
+                    dict_id = dict_cursor.lastrowid
+
+                    self._db_instance.execute('''
+                            DELETE from ItemsToTags where dictID = ? 
+                        ''', (dict_id,))
 
                     for tag in tags_list:
                         tags_cursor.execute('''
-                        INSERT OR IGNORE INTO Tags (id, name, language) VALUES (
+                        INSERT OR REPLACE INTO Tags (id, name, language) VALUES (
                             (SELECT id from Tags WHERE name = ? and language = ?), 
                             ?, (SELECT language from Languages where language = ?))
                         ''', (tag, lang_name, tag, lang_name))
 
                         tag_id = tags_cursor.lastrowid
-                        dict_id = dict_cursor.lastrowid
-
-                        self._db_instance.execute('''
-                            DELETE from ItemsToTags where dictID = ? 
-                        ''', (dict_id,))
-
+                        
                         self._db_instance.execute('''
                             INSERT OR IGNORE into ItemsToTags (tagID, dictID) VALUES (?, ?)
                         ''', (tag_id, dict_id))
