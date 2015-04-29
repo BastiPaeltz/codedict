@@ -30,6 +30,7 @@ def start_process(cmd_line_args):
     relevant_args = ({key: value for key, value in cmd_line_args.iteritems()
                       if value is not False and value is not None})
 
+
     relevant_args = unicode_everything(relevant_args)
 
     if '--editor' in relevant_args:
@@ -44,7 +45,7 @@ def start_process(cmd_line_args):
     elif '--wait' in relevant_args:
         set_wait_option(relevant_args)
 
-    elif '--rollback' in relevant_args:
+    elif 'rollback' in relevant_args:
         database = db.Database()
         database.rollback()
     else:
@@ -112,7 +113,7 @@ def split_arguments(arguments):
 
     request, flags = {}, {}
     for key, item in arguments.iteritems():
-        if key in ('-c', '-e', '-l', '-a', '-d', '-f', '-t',
+        if key in ('edit', 'link', 'add', 'display', 'file', 'tags', '-t', '-l',
                    '--hline', '--suffix'):
             flags[key] = item
         else:
@@ -126,17 +127,17 @@ def determine_proceeding(body, flags):
     Checks which operation (add, display, ...) needs to be handled. 
     """
 
-    if '-f' in flags:
+    if 'file' in flags:
         process_file_adding(body)
-    elif '-d' in flags:
+    elif 'display' in flags:
         determine_display_operation(body, flags)
-    elif '-t' in flags:
+    elif 'tags' in flags:
         show_tags(body, flags)
-    elif '-a' in flags:
+    elif 'add' in flags:
         insert_content()
-    elif '-c' in flags:
+    elif 'edit' in flags:
         process_code_adding(body)
-    elif '-l' in flags:
+    elif 'link' in flags:
         process_links(body, flags)
     else:
         print "An unexpected error has ocurred."
@@ -503,7 +504,7 @@ def determine_display_operation(body, flags):
         display_type = "tag"
         results, column_list = get_dict_results(database, body, flags)
 
-    elif '-l' in flags:
+    elif 'link' in flags:
         display_type = "link"
         results, column_list = get_link_results(database, body)
 
@@ -777,17 +778,13 @@ def process_and_validate_input(prompt):
     return user_input
 
 
-def build_args_dict(body, flags):
+def build_args_dict(flags):
     """
     Determines and sets hline and cutsearch as well as links based 
     if they are present in flags / body. --> Is needed for building table.
     """
 
     args_dict = {}
-    if '--cut' in flags and 'problem' in body:
-        args_dict['cut_search'] = body['problem']
-    elif '--cut' in flags and 'link_name' in body:
-        args_dict['cut_search'] = body['link_name']
 
     if '--hline' in flags:
         args_dict['hline'] = True

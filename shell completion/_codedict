@@ -1,0 +1,40 @@
+#compdef codedict
+
+_message_next_arg()
+{
+    argcount=0
+    for word in "${words[@][2,-1]}"
+    do
+        if [[ $word != -* ]] ; then
+            ((argcount++))
+        fi
+    done
+    if [[ $argcount -le ${#myargs[@]} ]] ; then
+        _message -r $myargs[$argcount]
+        if [[ $myargs[$argcount] =~ ".*file.*" || $myargs[$argcount] =~ ".*path.*" ]] ; then
+            _files
+        fi
+    fi
+}
+
+_codedict ()
+{
+    local context state state_descr line
+    typeset -A opt_args
+
+    if [[ $words[$CURRENT] == -* ]] ; then
+        _arguments -C \
+        ':command:->command' \
+		'(--suffix)--suffix[Sets the suffix for the specified language to the given value.]' \
+		'(--editor)--editor[Sets your editor to the specified value.]' \
+		'(--wait)--wait[This is needed on certain editors.]' \
+		'(--line)--line[The output table gets formated based on this value.]' \
+
+    else
+        myargs=('LANGUAGE' 'SUFFIX' 'EDITOR' 'INTEGER')
+        _message_next_arg
+    fi
+}
+
+
+_codedict "$@"
