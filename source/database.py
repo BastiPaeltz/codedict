@@ -151,6 +151,11 @@ class Database(object):
 
         try:
             with self._db_instance:
+
+                self._db_instance.execute('''
+                    INSERT or IGNORE into Languages (language, suffix) VALUES(?,?)
+                ''', (lang_name, suffix))
+
                 self._db_instance.execute('''
                     UPDATE Languages SET suffix = ? WHERE language = ?
                 ''', (suffix, lang_name, ))
@@ -300,10 +305,10 @@ class Database(object):
 
                 results = self._db_instance.execute(
                     '''
-                    SELECT problem, solution FROM Dictionary 
+                    SELECT DISTINCT problem, solution FROM Dictionary 
                     INNER JOIN ItemsToTags On Dictionary.id = ItemsToTags.dictID
                     INNER JOIN Tags On ItemsToTags.tagID = Tags.id
-                    WHERE Tags.language=? and name LIKE ?      
+                    WHERE Tags.language = ? and Tags.name LIKE ?      
                     ''', (values['language'], values['searchpattern'] + '%'))
 
                 return selected_rows_to_list(results)
@@ -468,7 +473,7 @@ class Database(object):
                         INSERT OR REPLACE INTO Tags (id, name, language) VALUES (
                             (SELECT id from Tags WHERE name = ? and language = ?), 
                             ?, (SELECT language from Languages where language = ?))
-                        ''', (tag, lang_name, tag, lang_name))
+                        ''', (tag.strip(), lang_name, tag.strip(), lang_name))
 
                         tag_id = tags_cursor.lastrowid
                         
@@ -508,9 +513,8 @@ class Database(object):
                 if selection_type == "basic":
 
                     selection = self._db_instance.execute('''
-                        SELECT problem, solution FROM Dictionary WHERE problem LIKE ? AND language = 
-                        (SELECT language from Languages where language = ?) 
-                    ''', (location['problem'] + '%', location['language']))
+                        SELECT language, problem, solution FROM Dictionary WHERE problem LIKE ?
+                    ''', (location['searchpattern'] + '%', ))
 
                 elif selection_type == "language":
 
@@ -524,7 +528,7 @@ class Database(object):
                     selection = self._db_instance.execute('''
                         SELECT solution FROM Dictionary WHERE problem = ? and language = 
                         (SELECT language from Languages where language = ?)
-                        ''', (location['problem'], location['language']))
+                        ''', (location['searchpattern'], location['language']))
 
                 return selection
 

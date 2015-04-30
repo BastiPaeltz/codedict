@@ -5,8 +5,8 @@ Let's you compile and access your own personal dictionary
 for programming via the command line with ease.
  
 Usage:
-  codedict display LANGUAGE [SEARCHPATTERN] [(-t | -l)] [--hline]
-  codedict file LANGUAGE PATH-TO-FILE [PROBLEM] 
+  codedict display LANGUAGE [SEARCHPATTERN] [(-t | -l) --hline]
+  codedict file PATH-TO-FILE LANGUAGE [PROBLEM] 
   codedict edit LANGUAGE PROBLEM
   codedict add
   codedict tags LANGUAGE  

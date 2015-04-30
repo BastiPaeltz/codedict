@@ -152,7 +152,8 @@ def check_for_suffix(language, database):
     if suffix and suffix[0]:
         return suffix[0]
     else:
-        input_suffix = process_and_validate_input("Enter file suffix for language " + language + " : ")
+        input_suffix = process_and_validate_input("Enter file suffix for language " 
+            + language + " : ")
         database.set_suffix(language, input_suffix)
         return input_suffix
 
@@ -340,7 +341,7 @@ def process_code_adding(body, database=False, code_of_target=False):
     else:
         body['attribute'] = "code"
         database.upsert_solution(body)
-        print "\nUpdating your codedict successfully."
+        print "\nUpdating your codedict successful."
 
 
 ###FILE ###
@@ -370,7 +371,7 @@ def process_file_adding(body):
         all_matches = (re.findall(r'%[^\|%]*?\|([^\|]*)\|[^\|%]*?\|([^\|]*)\|[^\|%]*\|([^\|]*)\|',
                                   file_text, re.UNICODE))
         database.add_content(all_matches, body['language'], insert_type="from_file")
-    print "\nUpdating your codedict from file successfully."
+    print "\nUpdating your codedict from file successful."
 
 
 ## LINKS
@@ -480,7 +481,7 @@ def insert_content():
         content_to_add[2] = input_from_editor(database, suffix=suffix)
 
     database.add_content([content_to_add], language)  # db method works best with lists
-    print "\nUpdating your codedict successfully."
+    print "\nUpdating your codedict successful."
 
 
 ### DISPLAYING ###
@@ -492,7 +493,7 @@ def determine_display_operation(body, flags):
     Perform follow up operation. 
     """
 
-    args_dict = build_args_dict(body, flags)
+    args_dict = build_args_dict(flags)
 
     database = db.Database()
 
@@ -504,7 +505,7 @@ def determine_display_operation(body, flags):
         display_type = "tag"
         results, column_list = get_dict_results(database, body, flags)
 
-    elif 'link' in flags:
+    elif '-l' in flags:
         display_type = "link"
         results, column_list = get_link_results(database, body)
 
@@ -552,7 +553,7 @@ def get_dict_results(database, body, flags):
         results = database.retrieve_dict_per_tags(body)
         column_list = ["index", "problem", "solution"]
 
-    elif 'searchpattern' not in body:
+    elif 'language' in body and body['language'] != "":
         results = database.retrieve_content(body, "language")
         column_list = ["index", "problem", "solution preview"]
 
@@ -673,13 +674,17 @@ class State(object):
 
         # dict table
         else:
-            permitted_actions = ('del', 'problem', 'solution', 'tag')
+            permitted_actions = ('del', 'problem', 'solution', 'tags')
             target, attribute = self._prompt_by_index(
                 prompt, 'solution', permitted_actions)
 
-            self.body_state['problem'] = target[1]
+            if self.body_state['language'] == "":
+                self.body_state['language'] = target[1]
+                self.body_state['problem'] = target[2]
+            else:    
+                self.body_state['problem'] = target[1]
 
-            if attribute == 'tag':
+            if attribute == 'tags':
                 self.update_tag_for_dict()
             elif attribute != 'solution':
                 self.body_state['attribute'] = attribute
@@ -738,7 +743,7 @@ class State(object):
         elif attribute == 'del':
             self.body_state['url'] = target[2]
             self._database.delete_links(self.body_state)
-            print "Deleting link {0} successfully.".format(target[1].encode('utf-8'))
+            print "Deleting link {0} successful.".format(target[1].encode('utf-8'))
             sys.exit(0)
 
         # language to link
@@ -859,4 +864,6 @@ def show_tags(body, flags):
         else:
             print ""
             body['searchpattern'] = tag_input
+            flags['display'] = True
+            print body, flags
             determine_display_operation(body, flags)
