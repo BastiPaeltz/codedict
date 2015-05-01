@@ -69,7 +69,6 @@ ATTRIBUTE can be `problem` or `tags` for normal tables and
 `name` or `language` for link tables.  
 You can also type `del`, if you want to delete an entry entirely.*
 
-
 * codedict doesn't work with my editor. **I immediately see "Nothing changed"**.
 *This has something to do with editors behaving differently in terms of how their executable gets invoked and how they deal with files they're currently working on.*  
 **Set `--wait` to 'on' to solve this.** 
