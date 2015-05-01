@@ -5,16 +5,17 @@ Install () {
 
     LOCATION="source/"
 
+    echo "Beginning installation..."
     cd ${LOCATION}
-    md5sum -c checksums.md5
-    
+    md5sum -c --quiet checksums.md5
+
     if  [ "$?" = "0" ]; then
         # installation begins here
         echo "Checksums OK."
         cd ..
 
         mkdir -p "${1}"
-        chown -c $(logname): "${1}"
+        chown $(logname): "${1}"
 
         if [ -e "${1}/res" ]; then
             cp -pvi ${LOCATION}* ${1}
