@@ -65,7 +65,7 @@ INSTALL_DIR and EXE_DIR:
 
 *Based on the table you can edit your codedict this way. **Choose the entry you want to change by index.** If you omit the attribute, you will be brought to your editor (for normal tables), where you can edit the solution - or for link tables, your browser will be opened on the entrie's URL.
 
-ATTRIBUTE can be `problem` or `tags` for normal tables and `name` or `language` for link tables. You can also type `del`, if you want to delete that vocabulary entirely.*
+Attribute can be `problem` or `tags` for normal tables and `name` or `language` for link tables. You can also type `del`, if you want to delete that vocabulary entirely.
 
 
 * codedict doesn't work with my editor. **I immediately see "Nothing changed"**.
