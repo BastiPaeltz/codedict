@@ -44,7 +44,7 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
 
 **When in doubt - codedict -h brings you to the help page**
 
-I wrote a blog entry with a complete codedict walkthrough by example. 
+<a href="http://blog.kaderx.com/blog/2015/04/30/codedict-by-example/" target="_blank">I also wrote a blog entry with a complete walkthrough of codedict by example.</a> 
 
 ## How to install
   Clone the current revision of the repository with  
@@ -61,7 +61,7 @@ INSTALL_DIR and EXE_DIR:
 ## Troubleshooting / remaining options explained
 
 * After displaying my table, I get prompted with:   
-`'Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort:'` 
+`'Do you want to do more? Usage: INDEX [ATTRIBUTE] - Press ENTER to abort:'` 
 
 *Based on the table you can edit your codedict this way. **Choose the entry you want to change by index.** If you omit the attribute, you will be brought to your editor (for normal tables), where you can edit the solution - or for link tables, your browser will be opened on the entrie's URL.
 
