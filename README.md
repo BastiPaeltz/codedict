@@ -47,18 +47,15 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
 I wrote a blog entry with a complete codedict walkthrough by example. 
 
 ## How to install
-  Run the **install.sh** inside the install directory, it's **usage** is:  
-  `install.sh INSTALL_TYPE [INSTALL_DIR] [EXE_DIR]`  
+  Clone the current revision of the repository with  
+  `git clone --depth=1  https://github.com/BastiPaeltz/codedict.git`
 
-* **INSTALL TYPE options**:  
-  * *frozen*: Installs a frozen (compiled) version. This won't require a python interpreter installed on your system.  
-  * *source*: Installs a source (python) version. This will require a python 2.7 interpreter installed on your system.  
+  Run the **install.sh** inside the install directory, it's **usage** is:  
+  `install.sh [INSTALL_DIR] [EXE_DIR]`  
 
 INSTALL_DIR and EXE_DIR:  
  You can specify a directory where the actual executable respectively the required libraries / source files **will be placed**. You **won't require** *sudo* rights to install if neither of those directories is in root land. 
   
-**If you are uncertain if the compiled file is malicious test it with antivirus software. Do your research - you shouldn't trust me blindly.** 
-
 *Not available for Windows yet.*  
 
 ## Troubleshooting / remaining options explained
