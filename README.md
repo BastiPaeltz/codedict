@@ -4,6 +4,77 @@
 
 ## What is it?
 
-**codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it. Lightweight, locally stored and easy to use, you can create your own *reference*, *documentation* or *dictionary* for development with codedict.   
+**codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it. Lightweight and locally stored, you can create your own *reference*, *documentation* or *dictionary* for development with codedict.
+
+You can visit my blog for a walkthrough by example. 
+
+codedict uses the **classic Cookbook** approach and adds additonal tag features. A typical **codedict entry** consists of 4 values: 
+
+  * (programming) **language** - e.g. 'python'
+
+  * **tags**, seperaed by semicolon - e.g. 'list methods;lists'
+ 
+  * **problem** - What do you want to do? - 'adding element to a list' for instance
+    
+  * The **solution** - How do you accomplish that? - 'list.append(element)' for instance, solution can be anything, from complicated algorithm or code examples to simple one-liners like our add-to-list example since you can **edit inside your favorite editor, where it is most comfortable**  
   
-## I'm still implementing stuff
+## How to use   
+  
+  Here are the elementary commands:
+  
+  * codedict add
+    * Basic, interactive, self-explaining way to add content to your codedict.   
+  * codedict link 
+    * You can add links to your codedict. Provide an URL, give it a name (optionally, but recommended) and assign it to a certain language(optionally).
+
+  * codedict tags
+    * Lists all tags for a certain language and offers to display all entries associated with a certain tag.
+
+  * codedict file
+    * You can add a basically unlimited amount of content to your codedict at a time by reading from a file. Just follow the pattern of beginning every new element(vocabulary) with a '%' and following that up with 3 (problem, solution, comment in that order) texts, each enclosed by '|'. See the sample.png for an example.   
+
+  * codedict display
+  	* Displays content from your codedict. Either for an entire language or only for certain problems. When doing the latter, all problems *starting* with your input get matched (e.g. *'python foo'* matches the problem *foo* as well as *foobar* for the language python) 
+    This way, you can structure your codedict nicely.  
+    The output gets printed to console(if output isn't longer than 25 lines), to your pager or editor in table form. Afterwards you can do further operations on your result, like updating the comment for example or editing the code. See the section below for more information.
+
+## How to install
+  Run the **install.sh** inside the install directory, it's usage is:  
+  install.sh INSTALL_TYPE [INSTALL_DIR] [EXE_DIR]  
+
+* **INSTALL_TYPE options**:  
+  * frozen: Installs a frozen (compiled) version. This won't require a python interpreter installed on your system.  
+  * source: Installs a source (python) version. This will require a python 2.7 interpreter installed on your system.  
+
+INSTALL_DIR and EXE_DIR: You can specify a directory where the actual executable respectively the required libraries / source files will be placed. You won't require *sudo* rights to install if neither of those directories is in root land. 
+  
+**If you are uncertain if the compiled file is malicious test it with antivirus software. Do your research - you shouldn't trust me blindly.** 
+  
+*Not available for Windows yet.*  
+
+## Troubleshooting / remaining options explained
+
+* How can I see the complete usage pattern and all options?
+
+*'codedict --help' or 'codedict -h'*
+
+* After displaying my table, I get prompted with:   
+**'Do you want to do more? Valid input: INDEX [ATTRIBUTE] - Press ENTER to abort:'** 
+
+*Based on the table you can edit your codedict this way. Choose the entry you want to change by index. If you omit the Attribute, you will be broguht to your editor (for normal tables), where you can edit the solution - or for link tables, your browser will be opened on the entrie's URL. ATTRIBUTE can be 'problem' or 'tags' for normal tables and 'name' or 'language' for link tables. You can also type 'del', if you want to delete that vocabulary entirely.*
+
+* codedict doesn't work with my editor. I immediately see "Nothing changed".
+
+*This has something to do with editors behaving differently in terms of how their executable gets invoked and how they deal with files they're currently working on.* **Set '--wait' to 'on' to solve this.** 
+
+* What happens when I set a problem additionally when adding from a file?
+
+*By default the content of the file will be parsed like described in the related section above. When 'problem' is set, the file's content will not be parsed but instead set as the* **solution field** *(of that specified 'problem').* 
+
+## Shell auto completion
+There are completion files provided for zsh and bash inside the shell completion folder.
+
+
+## License
+  
+*MIT*
