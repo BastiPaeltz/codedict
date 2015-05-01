@@ -2,44 +2,41 @@
 
 Install () {
     
-    # $1 INSTALLTYPE $2 INSTALLDIR $3 EXEDIR
-    if [ $1 = '1' ]; then
-        LOCATION="frozen/"
-    else
-        LOCATION="source/"
-    fi
+
+    LOCATION="source/"
 
     cd ${LOCATION}
-    if  [ ! $(md5sum -c checksum.txt | grep md5sum) ]; then
+    md5sum -c checksums.md5
+    
+    if  [ "$?" = "0" ]; then
         # installation begins here
         echo "Checksums OK."
         cd ..
 
-        if [ ! -e "${2}" ]; then
-            mkdir "${2}"
-        fi
+        mkdir -p "${1}"
+        chown -c $(logname): "${1}"
 
-        if [ -e "${2}/res" ]; then
-            cp -pvi ${LOCATION}* ${2}
+        if [ -e "${1}/res" ]; then
+            cp -pvi ${LOCATION}* ${1}
         else
-            cp -rpvi ${LOCATION}* ${2}
+            cp -rpvi ${LOCATION}* ${1}
         fi
 
-        case "$2" in
-            /*) ABSOLUTE_PATH=""$2"codedict";;
-            *) ABSOLUTE_PATH="$(pwd)/"$2"codedict";;
+        case "$1" in
+            /*) ABSOLUTE_PATH=""$1"codedict";;
+            *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
         esac
 
 
         EXECTEXT='#!/bin/sh \n \n'${ABSOLUTE_PATH}' $@'
 
         case "$3" in
-            */) ABSOLUTE_PATH=""$2"codedict";;
-            *) ABSOLUTE_PATH="$(pwd)/"$2"codedict";;
+            */) ABSOLUTE_PATH=""$1"codedict";;
+            *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
         esac
 
-        echo "$EXECTEXT" > ${3}"codedict"
-        chmod +x ${3}"codedict"
+        echo "$EXECTEXT" > ${2}"codedict"
+        chmod +x ${2}"codedict"
 
     else
         echo "Installation error - checksums didn't match."
@@ -48,64 +45,45 @@ Install () {
 }
 
 
-if [ -e frozen/ -a -e source/ ]; then
+if [ -e source/ ]; then
 
-    INSTALLTYPE=$1
-    INSTALLDIR=$2
-    EXECUTABLEDIR=$3
+    INSTALLDIR=$1
+    EXECUTABLEDIR=$2
 
-    if [ "$INSTALLTYPE" != "1" -a "$INSTALLTYPE" != "2" ]; then
-        echo "\
-USAGE: INSTALLTYPE [INSTALL_DIRECTORY] [EXECUTABLE_DIRECTORY]\n
-Please enter a correct installation type.\n\
-Installation types:\n\
+    
+    if [ ! $INSTALLDIR ]; then
+        INSTALLDIR="./"
+    fi
 
-1: Frozen installation - upside: No interpreter required. - downside: executable is compiled.\n\
-2: Source installation - upside: source code is readable. - downside: Python 2.7 interpreter required.\n\n\
-If you are uncertain if the compiled file is malicious, test it with antivirus software \n\
-or try to get reviews from people who already used it. \n\
-Do your research - you shouldn't trust me blindly."
-        exit
+    if [ ! $EXECUTABLEDIR ]; then
+        EXECUTABLEDIR="/usr/local/bin/"         
+    fi
 
-    else
-        if [ ! $INSTALLDIR ]; then
-            INSTALLDIR="./"
-        fi
+    case "$INSTALLDIR" in
+        */) INSTALLDIR=$INSTALLDIR;;
+        *) INSTALLDIR=$INSTALLDIR"/";;
+    esac
 
-        if [ ! $EXECUTABLEDIR ]; then
-            EXECUTABLEDIR="/usr/local/bin/"         
-        fi
+    case "$EXECUTABLEDIR" in
+        */) EXECUTABLEDIR=$EXECUTABLEDIR;;
+        *) EXECUTABLEDIR=$EXECUTABLEDIR"/";;
+    esac
 
-        case "$INSTALLDIR" in
-            */) INSTALLDIR=$INSTALLDIR;;
-            *) INSTALLDIR=$INSTALLDIR"/";;
-        esac
 
-        case "$EXECUTABLEDIR" in
-            */) EXECUTABLEDIR=$EXECUTABLEDIR;;
-            *) EXECUTABLEDIR=$EXECUTABLEDIR"/";;
-        esac
-
-        if [ $INSTALLTYPE = '1' ]; then
-            INSTALLTEXT="frozen"
-        else
-            INSTALLTEXT="source"
-        fi
-
-        echo "\
-You selected "$INSTALLTEXT" installation.\n\
+    echo "\
+Installing from source.\n\
 All files will be placed into "\'$INSTALLDIR\'" .\n\
 The actual executable will be placed into "\'$EXECUTABLEDIR\'" ."
-        
-        while true; do
-            read -p "Do you wish to install this program? (y/n) " yn
-            case $yn in
-                [Yy]* ) Install $INSTALLTYPE $INSTALLDIR $EXECUTABLEDIR; break;;
-                [Nn]* ) exit;;
-                * ) echo "Please answer yes or no. (y/n) ";;
-            esac
-        done
-    fi
+    
+    while true; do
+        read -p "Do you wish to install this program? (y/n) " yn
+        case $yn in
+            [Yy]* ) Install $INSTALLDIR $EXECUTABLEDIR; break;;
+            [Nn]* ) exit;;
+            * ) echo "Please answer yes or no. (y/n) ";;
+        esac
+    done
+    
 else
     echo "Installation error - missing files."
     exit 
