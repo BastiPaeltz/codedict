@@ -56,7 +56,7 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
 *INSTALL_DIR* and *EXE_DIR*:  
  You can specify a directory where the actual executable respectively the required libraries / source files **will be placed**. You **won't require** `sudo` rights to install if neither of those directories is in root land. 
   
-*Requires python 2.7 interpreter* 
+*Requires python 2.7 interpreter*   
 *Not available for Windows yet.*  
 
 ## Troubleshooting / remaining options explained
