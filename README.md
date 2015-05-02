@@ -26,7 +26,7 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
     * Basic, interactive, self-explaining way to **add content** to your codedict. 
   
   * `codedict tags`
-    * Lists ***all tags** for the given language and offers to display **all entries associated** with a certain tag.
+    * Lists **all tags** for the given language and offers to display **all entries associated** with a certain tag.
   
   * `codedict edit`
     * A shortcut for adding or **editing content**. You need to provide a language as well as a problem. If this combination already exists, you can edit the already exisiting solution. If not, a **new entry will be created**. 
