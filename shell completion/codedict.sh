@@ -5,7 +5,7 @@ _codedict()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [ $COMP_CWORD -eq 1 ]; then
-        COMPREPLY=( $( compgen -fW '--suffix --editor --wait --line on off tags edit add link file rollback display' -- $cur) )
+        COMPREPLY=( $( compgen -fW '--suffix --editor --wait --line on off tags edit add link file rollback display import export' -- $cur) )
     else
         case ${COMP_WORDS[1]} in
             on)
@@ -35,6 +35,11 @@ _codedict()
             display)
             _codedict_display
         ;;
+            import)
+            _codedict_import
+        ;;
+            export)
+            _codedict_expor
         esac
 
     fi
@@ -161,6 +166,26 @@ _codedict_display()
 
     if [ $COMP_CWORD -ge 2 ]; then
         COMPREPLY=( $( compgen -fW '-t -l --hline ' -- $cur) )
+    fi
+}
+
+_codedict_import()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [ $COMP_CWORD -ge 2 ]; then
+        COMREPLY=( $( compgen -fW ' ' -- $cur ) )
+    fi
+}
+
+_codedict_export()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [ $COMP_CWORD -ge 2 ]; then
+        COMPREPLY=( $( compgen -W ' ' -- $cur ) )
     fi
 }
 
