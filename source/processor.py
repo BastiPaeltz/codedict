@@ -19,6 +19,7 @@ import os
 import urlparse
 import webbrowser
 import pydoc
+from xml.etree import ElementTree
 
 ##GENERAL 
 
@@ -113,8 +114,8 @@ def split_arguments(arguments):
 
     request, flags = {}, {}
     for key, item in arguments.iteritems():
-        if key in ('edit', 'link', 'add', 'display', 'file', 'tags', '-t', '-l',
-                   '--hline', '--suffix'):
+        if key in ('edit', 'link', 'add', 'display', 'file', 'tags', 
+                   'export', 'import', '-t', '-l', '--hline', '--suffix'):
             flags[key] = item
         else:
             request[key.lower()] = item
@@ -139,9 +140,12 @@ def determine_proceeding(body, flags):
         process_code_adding(body)
     elif 'link' in flags:
         process_links(body, flags)
+    elif 'export' in flags:
+        process_export(body)
+    elif 'import' in flags:
+        process_import(body)
     else:
         print "An unexpected error has ocurred."
-
 
 def check_for_suffix(language, database):
     """Checks if the DB has a suffix for the requested language, if not 
@@ -867,3 +871,158 @@ def show_tags(body, flags):
             flags['display'] = True
             print body, flags
             determine_display_operation(body, flags)
+
+## IMPORTING AND EXPORTING
+
+def process_export(body):
+    """
+    Exports the contents of at least one entry as XML, according to the 
+    language and tags.
+    """
+    database = db.Database()
+
+    output_file = body['path-to-file']
+    language = body['language']
+
+    raw_tags = process_and_validate_input("Enter the tags to export - separated with ';' : ")
+    tags = [tag.strip() for tag in raw_tags.split(';')]
+
+    if len(tags) == 1 and not tags[0]:
+        # This actually empty input - we don't want to search for
+        # 'the empty tag', but rather place no restriction on what tags we export.
+        tags = []
+
+    entries = database.get_full_dump(language, tags)
+    
+    root_element = ElementTree.Element('codedict', {'language': language})
+    for entry in entries:
+        entry_root = ElementTree.SubElement(root_element, 'entry')
+
+        entry_problem = ElementTree.SubElement(entry_root, 'problem')
+        entry_problem.text = entry.problem
+
+        entry_solution = ElementTree.SubElement(entry_root, 'solution')
+        entry_solution.text = entry.solution
+
+        for tag in entry.tags:
+            ElementTree.SubElement(entry_root, 'tag', {'value': tag})
+
+    tree = ElementTree.ElementTree(root_element)
+    tree.write(output_file)
+
+def construct_entry_from_node(node):
+    """
+    Constructs a DumpEntry object from an ElementTree Element.
+
+    Note that the language isn't actually defined, since that is given with the
+    root of the XML hierarchy, and not each individual element.
+    """
+    language = None
+    problem = node.find('problem').text
+    solution = node.find('solution').text
+
+    # This has to be a frozenset, since we want to put the DumpEntry as a whole
+    # in a set later
+    tags = frozenset(tag_elem.get('value') for tag_elem in node.findall('tag'))
+    return db.DumpEntry(language, tags, problem, solution)
+
+def get_indicies(selection, entries):
+    """
+    Converts a selection (a number, range, or '*') into a list of numeric indices
+    over a list of entries.
+
+    Note that the indices the user is giving start at 1, not at 0.
+    """
+    if selection == '*':
+        return range(len(entries))
+    elif '-' in selection:
+        start, end = [int(boundary) for boundary in selection.split('-')]
+        if start > len(entries):
+            raise ValueError('Cannot have a range which starts after the end')
+        if end > len(entries):
+            raise ValueError('Cannot have a range which ends after the end')
+                
+        return range(start - 1, end)
+    else:
+        return [int(selection) - 1]
+
+def process_import(body):
+    """
+    Imports the contents of an XML file into the database. Note that the user
+    is first given a choice of what contents to import and export.
+    """
+    database = db.Database()
+
+    # First, slurp in the XML file and convert it into a form we can use - 
+    # a list of DumpEntry objects as returned by Database.get_full_dump
+    xml_tree = ElementTree.parse(body['path-to-file'])
+    xml_root = xml_tree.getroot()
+
+    language = xml_root.get('language')
+
+    entries = [construct_entry_from_node(xml_entry) for xml_entry in xml_root]
+    selections = set(entries)
+
+    while True:
+        # Before asking the user to decide anything, give them an updated view
+        # of the table
+        printed_entries = [
+            (str(index + 1), str(entry in selections), entry.language, ';'.join(entry.tags), entry.problem, 
+             entry.solution)
+            for index, entry in enumerate(entries)
+        ]
+
+        linelen = get_console_length(database)
+        _, table = build_table(['Index', 'Importing?', 'Language', 'Tags', 'Problem', 'Solution'],
+                printed_entries,
+                linelen,
+                {})
+        process_printing(table)
+
+        HELP = '''
+        Available actions are:
+
+            go runs the import, and pulls all selected items into your database.
+
+            abort stops the import, and does not modify your database.
+
+            +{selection} adds the selected rows to the import set. 
+            {selection} can either be a number,  a range (like 1-10), or '*' 
+            which means all rows.
+        
+            -{selection} removes the selected rows from the import set.
+       
+            help shows this text.
+       '''
+
+        action = raw_input('Enter a command [go, abort, +{selection}, -{selection}, help]: ')
+        action = action.strip()
+
+        try:
+            if action[0] == '+':
+                rows = get_indicies(action[1:], entries)
+                action_entries = set(entries[idx] for idx in rows)
+
+                selections |= action_entries
+            elif action[0] == '-':
+                rows = get_indicies(action[1:], entries)
+                action_entries = set(entries[idx] for idx in rows)
+
+                selections -= action_entries
+            elif action == 'go':
+                break
+            elif action == 'abort':
+                return
+            else:
+                print HELP
+        except ValueError as err:
+            print('Error:', err)
+
+    # We've got confirmation, and we can go ahead and push everything to the
+    # DB. We need to massage the input to get it to conform to the DB module's
+    # expectations before we can do that.
+    db_rows = [(';'.join(entry.tags), entry.problem, entry.solution)
+               for entry in entries]
+
+    database.add_content(db_rows, language, insert_type='from_file')
+    print 'Successfully inserted', len(db_rows), 'entries'

@@ -11,6 +11,8 @@ Usage:
   codedict add
   codedict tags LANGUAGE  
   codedict link URL [LINK_NAME] [LANGUAGE] 
+  codedict export PATH-TO-FILE LANGUAGE
+  codedict import PATH-TO-FILE
   codedict --suffix LANGUAGE SUFFIX
   codedict --editor EDITOR
   codedict --wait (off | on)
