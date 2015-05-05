@@ -3,11 +3,14 @@ Defines the data processing / handling using local sqlite3 database.
 """
 
 # import from standard library
+from collections import namedtuple
 import sqlite3
 import sys
 import os
 import shutil
 
+# This structures return values form 'Database.get_full_dump'
+DumpEntry = namedtuple('DumpEntry', ['language', 'tags', 'problem', 'solution'])
 
 class Database(object):
     """
@@ -208,6 +211,45 @@ class Database(object):
                          values['problem'],
                          values['language']))
 
+        except sqlite3.Error as error:
+            print "A database error has ocurred: ", error
+            sys.exit(1)
+
+    def get_full_dump(self, language, required_tags):
+        """
+        Gets a full dump of all entries which have the given language, and
+        all of the given tags. The return value is a list of DumpEntry
+        objects.
+        """
+        required_tags = set(required_tags)
+        try:
+            with self._db_instance:
+                # FIXME: This can probably be done better in pure-SQL, but 30 
+                # minutes of web searching hasn't revealed how
+                all_problems = self._db_instance.execute(
+                    '''
+                    SELECT id, language, problem, solution
+                    FROM Dictionary
+                    ''')
+
+                results = []
+                for dict_id, language, problem, solution in all_problems.fetchall():
+                    tag_results = self._db_instance.execute(
+                        '''
+                        SELECT name FROM Tags
+                        INNER JOIN ItemsToTags
+                        ON ItemsToTags.tagID = Tags.id
+                        WHERE ItemsToTags.dictID = ?
+                        ''', (dict_id,))
+                    tags = set(tag for (tag,) in tag_results)
+
+                    # This is the part of the query difficult to recreate in
+                    # SQL - ensuring that the tags on the entry are a superset
+                    # of the tags given by the user
+                    if required_tags <= tags:
+                        results.append(DumpEntry(language, tags, problem, solution))
+
+                return results
         except sqlite3.Error as error:
             print "A database error has ocurred: ", error
             sys.exit(1)

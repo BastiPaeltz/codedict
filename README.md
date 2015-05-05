@@ -42,6 +42,9 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
   * `codedict link` 
     * You can add links to your codedict. Provide an **URL**, give it a name (optionally, but recommended) and assign it to a certain language(optionally).
 
+  * `codedict export file language` and `codedict import file`
+    * codedict allows you to export and import entries stored outside of your database for easy backup and storage.
+
 **When in doubt - `codedict -h` brings you to the help page.**
 
 <a href="http://blog.kaderx.com/blog/2015/04/30/codedict-by-example/" target="_blank">I also wrote a blog entry with a complete walkthrough of codedict by example.</a> 
