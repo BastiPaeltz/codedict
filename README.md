@@ -63,7 +63,11 @@ codedict uses the **classic Cookbook** approach and adds additonal tag features.
   
 **Requires python 2.7 interpreter**   
   
-*Not available for Windows yet.*  
+### codedict on Windows
+
+I tested codedict on Windows and the **core program works** on Windows shells (PowerShell etc.) and unix shells (git bash etc.). Just clone codedict and `cd` into the `source` folder. On Windows shells, you would run `python.exe codedict`, on unix shells just run `./codedict`.   
+The **problem** is, I'm not a Windows guy and unfortunately have no clue how to make codedict runnable from anywhere.  
+**It would be supercool, if someone of you, who knows how to work with Windows could help me out with this.**  
 
 ## Troubleshooting / remaining options explained
 
