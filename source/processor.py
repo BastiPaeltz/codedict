@@ -2,8 +2,11 @@
 Processes the command line args.
 """
 
-# emacs shortcuts in raw_input
-import readline
+# emacs shortcuts in raw_input, doesn't work on Windows
+try:
+	import readline
+except ImportError:
+	pass
 
 # relative import
 import database as db

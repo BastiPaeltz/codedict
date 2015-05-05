@@ -6,43 +6,32 @@ Install () {
     LOCATION="source/"
 
     echo "Beginning installation..."
-    cd ${LOCATION}
-    md5sum -c --quiet checksums.md5
 
-    if  [ "$?" = "0" ]; then
-        # installation begins here
-        echo "Checksums OK."
-        cd ..
+    mkdir -p "${1}"
+    chown $(logname): "${1}"
 
-        mkdir -p "${1}"
-        chown $(logname): "${1}"
-
-        if [ -e "${1}/res" ]; then
-            cp -pvi ${LOCATION}* ${1}
-        else
-            cp -rpvi ${LOCATION}* ${1}
-        fi
-
-        case "$1" in
-            /*) ABSOLUTE_PATH=""$1"codedict";;
-            *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
-        esac
-
-
-        EXECTEXT='#!/bin/sh \n \n'${ABSOLUTE_PATH}' $@'
-
-        case "$3" in
-            */) ABSOLUTE_PATH=""$1"codedict";;
-            *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
-        esac
-
-        echo "$EXECTEXT" > ${2}"codedict"
-        chmod +x ${2}"codedict"
-
+    if [ -e "${1}/res" ]; then
+        cp -pvi ${LOCATION}* ${1}
     else
-        echo "Installation error - checksums didn't match."
-        exit 1
+        cp -rpvi ${LOCATION}* ${1}
     fi
+
+    case "$1" in
+        /*) ABSOLUTE_PATH=""$1"codedict";;
+        *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
+    esac
+
+
+    EXECTEXT='#!/bin/sh \n \n'${ABSOLUTE_PATH}' $@'
+
+    case "$3" in
+        */) ABSOLUTE_PATH=""$1"codedict";;
+        *) ABSOLUTE_PATH="$(pwd)/"$1"codedict";;
+    esac
+
+    echo "$EXECTEXT" > ${2}"codedict"
+    chmod +x ${2}"codedict"
+
 }
 
 
