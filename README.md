@@ -2,6 +2,8 @@
 
 #### A command-line dictionary for the developer who likes it organized.
 
+#### Thanks to <a href="https://github.com/adamnew123456">Adam</a> for his awesome pull request which brings export and import functionality to codedict.
+
 ## What is it?
 
 **codedict** is a little command line tool designed to be your personal dictionary for programming / developing. It is entirely up to you how to organize and arrange it.  
