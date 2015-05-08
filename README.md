@@ -77,7 +77,7 @@ The **problem** is, I'm not a Windows guy and unfortunately have no clue how to 
 *Based on the table you can edit your codedict this way.* **Choose the entry you want to change by index.** *If you omit the attribute, you will be brought to your editor (for normal tables), where you can edit the solution - or for link tables, your browser will be opened on the entrie's URL*.  
 ATTRIBUTE can be `problem` or `tags` for normal tables and  
 `name` or `language` for link tables.  
-You can also type `del`, if you want to delete an entry entirely.*
+**You can also type `del`, if you want to delete an entry entirely.**
 
 * codedict doesn't work with my editor. **I immediately see "Nothing changed"**.
 *This has something to do with editors behaving differently in terms of how their executable gets invoked and how they deal with files they're currently working on.*  
@@ -91,9 +91,13 @@ You can also type `del`, if you want to delete an entry entirely.*
 
 *One extra trick you can do - if you omit the language like above, entries get matched across languages. The command above would display all 'my_search_pattern' entries, no matter what language.*
 
-* What happens when I set `problem` additionally when adding from a file?
+* What happens when I set `problem` additionally when adding from a file ?
 
 *By default the content of the file will be parsed like described in the related section above. When 'problem' is set, the file's content will not be parsed but instead set as the* `solution` field *(of that specified 'problem').* 
+
+* `How can I see my current configurations (editor etc.) ?
+
+*Just invoke the command you like without a value - e.g.* `codedict --editor`
 
 ## Shell auto completion
 There are completion files provided for **zsh and bash** inside the shell completion folder.
