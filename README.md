@@ -95,7 +95,7 @@ ATTRIBUTE can be `problem` or `tags` for normal tables and
 
 *By default the content of the file will be parsed like described in the related section above. When 'problem' is set, the file's content will not be parsed but instead set as the* `solution` field *(of that specified 'problem').* 
 
-* `How can I see my current configurations (editor etc.) ?
+* How can I see my current configurations (editor etc.) ?
 
 *Just invoke the command you like without a value - e.g.* `codedict --editor`
 
