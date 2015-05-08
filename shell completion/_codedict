@@ -25,10 +25,10 @@ _codedict ()
     if [[ $words[$CURRENT] == -* ]] ; then
         _arguments -C \
         ':command:->command' \
-        '(--suffix)--suffix[Sets the suffix for the specified language to the given value.]' \
-        '(--editor)--editor[Sets your editor to the specified value.]' \
-        '(--wait)--wait[This is needed on certain editors.]' \
-        '(--line)--line[The output table gets formated based on this value.]' \
+		'(--suffix)--suffix[Sets the suffix for the specified language to the given value.]' \
+		'(--editor)--editor[Sets your editor to the specified value.]' \
+		'(--wait)--wait[This is needed on certain editors.]' \
+		'(--line)--line[The output table gets formated based on this value.]' \
 
     else
         myargs=('LANGUAGE' 'SUFFIX' 'EDITOR' 'INTEGER')

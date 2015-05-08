@@ -38,13 +38,13 @@ def start_process(cmd_line_args):
     relevant_args = unicode_everything(relevant_args)
 
     if '--editor' in relevant_args:
-        set_editor(relevant_args['EDITOR'])
+        configure_editor(relevant_args)
 
     elif '--suffix' in relevant_args:
-        set_suffix(relevant_args['SUFFIX'], relevant_args['LANGUAGE'])
+        configure_suffix(relevant_args)
 
     elif '--line' in relevant_args:
-        set_line_length(relevant_args['INTEGER'])
+        configure_line_length(relevant_args)
 
     elif '--wait' in relevant_args:
         set_wait_option(relevant_args)
@@ -73,6 +73,47 @@ def set_wait_option(option):
     database.set_config_item('wait', value)
     sys.exit(0)
 
+def configure_editor(arguments):
+    """
+    Configures editor value, gets called when --editor is invoked. 
+    Displays current value when no LINE argument in given.
+    """
+
+    if 'EDITOR' in arguments:
+        set_editor(arguments['EDITOR'])
+    else:
+        database = db.Database()
+        editor = check_for_editor(database)
+        print "Your current editor is '{0}'.".format(editor)
+
+def configure_line_length(arguments):
+    """
+    Configures line length value, gets called when --line is invoked. 
+    Displays current value when no INTEGER argument in given.
+    """
+
+    if 'INTEGER' in arguments:
+        set_line_length(arguments['INTEGER'])
+    else:
+        database = db.Database()
+        length = get_console_length(database)
+        print "Your current console length is {0} characters.".format(length)
+
+def configure_suffix(arguments):
+    """
+    Configures suffix value, gets called when --suffix is invoked. 
+    Displays current value when no SUFFIX argument in given.
+    """
+
+    if 'SUFFIX' in arguments:
+        set_suffix(arguments['SUFFIX'], arguments['LANGUAGE'])
+    else:
+        database = db.Database()
+        suffix = check_for_suffix(arguments['LANGUAGE'], database, prompt_for_input=False)
+        if suffix:
+            print "Suffix for language {0} is '{1}'.".format(arguments['LANGUAGE'], suffix)
+        else:
+            print "Suffix is currently not set for language {0}".format(arguments['LANGUAGE'])
 
 def set_editor(editor):
     """
@@ -150,7 +191,7 @@ def determine_proceeding(body, flags):
     else:
         print "An unexpected error has ocurred."
 
-def check_for_suffix(language, database):
+def check_for_suffix(language, database, prompt_for_input=True):
     """Checks if the DB has a suffix for the requested language, if not 
        it prompts to specify one.
     """
@@ -159,13 +200,13 @@ def check_for_suffix(language, database):
     if suffix and suffix[0]:
         return suffix[0]
     else:
-        input_suffix = process_and_validate_input("Enter file suffix for language " 
+        if prompt_for_input:
+            input_suffix = process_and_validate_input("Enter file suffix for language " 
             + language + " : ")
-        database.set_suffix(language, input_suffix)
-        return input_suffix
-
-
-###OUTPUT ###
+            database.set_suffix(language, input_suffix)
+            return input_suffix
+        else:
+            return False
 
 def check_for_editor(database):
     """
@@ -186,14 +227,16 @@ def check_for_editor(database):
 
 def editor_to_list(database):
     """
-    Gets editor and turns it into list.
+    Gets editor and turns it into list. Returns the editor string as well for convenience
+    when displaying an error.
     """
 
     editor_value = check_for_editor(database)
     # subprocess works best with lists instead of strings
     editor_list = [argument for argument in editor_value.split(" ")]
-    return editor_list
+    return editor_list, editor_value
 
+###OUTPUT ###
 
 def process_printing(table):
     """
@@ -219,7 +262,7 @@ def print_to_editor(table, database):
     Returns: tempfile so it can be removed
     """
 
-    editor = editor_to_list(database)
+    editor, editor_string = editor_to_list(database)
 
     prewritten_data = table.get_string()  # prettytable to string
 
@@ -230,7 +273,9 @@ def print_to_editor(table, database):
             try:
                 subprocess.Popen(editor + [tmpfile.name])
             except (OSError, IOError) as error:
-                print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+                print ("Error calling your editor '{0}'. Please make sure, this is an executable."
+                    .format(editor_string))
+                print "Original python error message was:\n {0}".format(error.strerror)
                 sys.exit(1)
 
         except (OSError, IOError) as error:
@@ -268,7 +313,7 @@ def input_from_editor(database, existing_content="", suffix=""):
     Tries to delete file.
     """
 
-    editor = editor_to_list(database)
+    editor, editor_string = editor_to_list(database)
 
     prewritten_data = existing_content.encode('utf-8')
 
@@ -290,7 +335,9 @@ def input_from_editor(database, existing_content="", suffix=""):
             try:
                 subprocess.Popen(editor + [tmpfile.name])
             except (OSError, IOError, ValueError) as error:
-                print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+                print ("Error calling your editor '{0}'. Please make sure, this is an executable."
+                    .format(editor_string))
+                print "Original python error message was:\n {0}".format(error.strerror)
                 sys.exit(1)
 
             tmpfile.close()
@@ -305,7 +352,9 @@ def input_from_editor(database, existing_content="", suffix=""):
             try:
                 subprocess.call(editor + [tmpfile.name])
             except (OSError, IOError) as error:
-                print "Error calling your editor - ({0}): {1}".format(error.errno, error.strerror)
+                print ("Error calling your editor '{0}'. Please make sure, this is an executable."
+                    .format(editor_string))
+                print "Original python error message was:\n {0}".format(error.strerror)
                 sys.exit(1)
 
                 # no matter what platform from now on

@@ -5,9 +5,12 @@ _codedict()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [ $COMP_CWORD -eq 1 ]; then
-        COMPREPLY=( $( compgen -fW '--suffix --editor --wait --line on off tags edit add link file rollback display import export' -- $cur) )
+        COMPREPLY=( $( compgen -fW '--suffix --editor --wait --line rollback on off tags edit add link file import export display' -- $cur) )
     else
         case ${COMP_WORDS[1]} in
+            rollback)
+            _codedict_rollback
+        ;;
             on)
             _codedict_on
         ;;
@@ -29,19 +32,61 @@ _codedict()
             file)
             _codedict_file
         ;;
-            rollback)
-            _codedict_rollback
-        ;;
-            display)
-            _codedict_display
-        ;;
             import)
             _codedict_import
         ;;
             export)
-            _codedict_expor
+            _codedict_export
+        ;;
+            display)
+            _codedict_display
+        ;;
         esac
 
+    fi
+}
+
+_codedict_rollback()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [ $COMP_CWORD -eq 2 ]; then
+        COMPREPLY=( $( compgen -W ' im' -- $cur) )
+    else
+        case ${COMP_WORDS[2]} in
+            im)
+            _codedict_rollback_im
+        ;;
+        esac
+
+    fi
+}
+
+_codedict_rollback_im()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [ $COMP_CWORD -eq 3 ]; then
+        COMPREPLY=( $( compgen -W ' sure' -- $cur) )
+    else
+        case ${COMP_WORDS[3]} in
+            sure)
+            _codedict_rollback_im_sure
+        ;;
+        esac
+
+    fi
+}
+
+_codedict_rollback_im_sure()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [ $COMP_CWORD -ge 4 ]; then
+        COMPREPLY=( $( compgen -W ' ' -- $cur) )
     fi
 }
 
@@ -115,47 +160,23 @@ _codedict_file()
     fi
 }
 
-_codedict_rollback()
+_codedict_import()
 {
     local cur
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    if [ $COMP_CWORD -eq 2 ]; then
-        COMPREPLY=( $( compgen -W ' im' -- $cur) )
-    else
-        case ${COMP_WORDS[2]} in
-            im)
-            _codedict_rollback_im
-        ;;
-        esac
-
+    if [ $COMP_CWORD -ge 2 ]; then
+        COMPREPLY=( $( compgen -fW ' ' -- $cur) )
     fi
 }
 
-_codedict_rollback_im()
+_codedict_export()
 {
     local cur
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    if [ $COMP_CWORD -eq 3 ]; then
-        COMPREPLY=( $( compgen -W ' sure' -- $cur) )
-    else
-        case ${COMP_WORDS[3]} in
-            sure)
-            _codedict_rollback_im_sure
-        ;;
-        esac
-
-    fi
-}
-
-_codedict_rollback_im_sure()
-{
-    local cur
-    cur="${COMP_WORDS[COMP_CWORD]}"
-
-    if [ $COMP_CWORD -ge 4 ]; then
-        COMPREPLY=( $( compgen -W ' ' -- $cur) )
+    if [ $COMP_CWORD -ge 2 ]; then
+        COMPREPLY=( $( compgen -fW ' ' -- $cur) )
     fi
 }
 
@@ -166,26 +187,6 @@ _codedict_display()
 
     if [ $COMP_CWORD -ge 2 ]; then
         COMPREPLY=( $( compgen -fW '-t -l --hline ' -- $cur) )
-    fi
-}
-
-_codedict_import()
-{
-    local cur
-    cur="${COMP_WORDS[COMP_CWORD]}"
-
-    if [ $COMP_CWORD -ge 2 ]; then
-        COMREPLY=( $( compgen -fW ' ' -- $cur ) )
-    fi
-}
-
-_codedict_export()
-{
-    local cur
-    cur="${COMP_WORDS[COMP_CWORD]}"
-
-    if [ $COMP_CWORD -ge 2 ]; then
-        COMPREPLY=( $( compgen -W ' ' -- $cur ) )
     fi
 }
 

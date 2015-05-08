@@ -13,10 +13,10 @@ Usage:
   codedict link URL [LINK_NAME] [LANGUAGE] 
   codedict export PATH-TO-FILE LANGUAGE
   codedict import PATH-TO-FILE
-  codedict --suffix LANGUAGE SUFFIX
-  codedict --editor EDITOR
+  codedict --suffix LANGUAGE [SUFFIX]
+  codedict --editor [EDITOR]
   codedict --wait (off | on)
-  codedict --line INTEGER
+  codedict --line [INTEGER]
   codedict rollback im sure
 
 Options:
